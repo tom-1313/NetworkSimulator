@@ -13,7 +13,8 @@ import java.awt.geom.*;
 import javax.swing.*;
 import java.awt.event.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
-    
+import java.io.*;
+
 public class App extends JFrame {
     /**
      * The main entry point that sets up the window and basic functionality
@@ -27,10 +28,16 @@ public class App extends JFrame {
         frame.setVisible(true);
     }
 
+    private Network net;
     private VisPanel visPane;
-    
+    private Debug debug = Debug.getInstance();
+    JComboBox<String> routerBox;
+        
     /* Constructor: Sets up the initial look-and-feel */
     public App() {
+        // Network administrative stuff first
+        net = null;  // No network loaded/created yet.
+        
         JLabel label;  // Temporary variable for a label
         JButton button; // Temporary variable for a button
 
@@ -54,12 +61,21 @@ public class App extends JFrame {
         // Drop down list (Flood, Distance Vector, Link State)
         JLabel routerLabel = new JLabel("Router:");
         String[] choices = { "Flood", "Distance Vector", "Link State" };
-        JComboBox<String> routerBox = new JComboBox<String>(choices);
+        routerBox = new JComboBox<String>(choices);
+        routerBox.setEnabled(true);
         buttonPanel.add(routerBox);
         
         // Run/Reset network button
         Action runAction = new AbstractAction("Run") {
                 public void actionPerformed(ActionEvent e) {
+                    this.setEnabled(false);  // No more changes allowed
+                    routerBox.setEnabled(false);  // No more changes allowed
+                    Thread netRun = new Thread() {
+                            public void run() {
+                                setupAndRunNetwork();
+                            }
+                        };
+                    netRun.start();
                 }
             };
         runAction.putValue(Action.SHORT_DESCRIPTION, "Start the network running.");
@@ -86,16 +102,29 @@ public class App extends JFrame {
         menu = new JMenu("File");
         menuAction = new AbstractAction("Load Network") {
                 JFileChooser chooser = null;
-                public void actionPerformed(ActionEvent e) {
+                public void actionPerformed(ActionEvent event) {
+                    if (net != null) {
+                        // Network already loaded
+                        JOptionPane.showMessageDialog(visPane, "Sorry.  A network has already been loaded.  Currently, we don't support overriding it.",
+                                                      "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
                     if (chooser == null) {
-                        chooser = new JFileChooser();
+                        chooser = new JFileChooser(new File(System.getProperty("user.dir")));
                         FileNameExtensionFilter filter = new FileNameExtensionFilter("Networks (GQU)", "gqu");
                         chooser.setFileFilter(filter);
                     }
                     int returnVal = chooser.showOpenDialog(visPane);
+                    String networkFile = null;
                     if(returnVal == JFileChooser.APPROVE_OPTION) {
-                        System.out.println("You chose to open this file: " +
-                                           chooser.getSelectedFile().getName());
+                        try {
+                            net = new Network();
+                            networkFile = chooser.getSelectedFile().getName();
+                            net.loadNetwork(networkFile);
+                        } catch (Exception e) {
+                            JOptionPane.showMessageDialog(visPane, "Error loading network: " + networkFile + "\n", "Error", JOptionPane.ERROR_MESSAGE);
+                            net = null;  // Clear it back out.  So, it can be loaded again.
+                        }
                     }
                 }
             };
@@ -107,6 +136,18 @@ public class App extends JFrame {
         menu = new JMenu("Monitor");
         mbar.add(menu);
         setJMenuBar(mbar);
+    }
+
+    // Assigns routers and then starts the network running
+    public void setupAndRunNetwork() {
+        try {
+            net.createRouters(new FloodRouter.Generator());
+            net.runNetwork(System.out, 10000, 1, 0.5);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(visPane, "Error running the network.",
+                                                      "Error", JOptionPane.ERROR_MESSAGE);
+            debug.println(0, "Error running network: " + e.getMessage());
+        }
     }
     
     public class VisPanel extends JPanel {
