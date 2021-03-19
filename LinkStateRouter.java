@@ -16,7 +16,7 @@ public class LinkStateRouter extends Router {
     }
 
     Debug debug;
-    public HashMap<Router, Double> table;
+    public HashMap<Integer, Double> table;
     
     public LinkStateRouter(int nsap, NetworkInterface nic) {
         super(nsap, nic);
