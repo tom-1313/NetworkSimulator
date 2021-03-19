@@ -32,6 +32,7 @@ public class App extends JFrame {
     private VisPanel visPane;
     private Debug debug = Debug.getInstance();
     JComboBox<String> routerBox;
+    final private String[] routerChoices = { "Flood", "Distance Vector", "Link State" };
         
     /* Constructor: Sets up the initial look-and-feel */
     public App() {
@@ -60,8 +61,7 @@ public class App extends JFrame {
 
         // Drop down list (Flood, Distance Vector, Link State)
         JLabel routerLabel = new JLabel("Router:");
-        String[] choices = { "Flood", "Distance Vector", "Link State" };
-        routerBox = new JComboBox<String>(choices);
+        routerBox = new JComboBox<String>(routerChoices);
         routerBox.setEnabled(true);
         buttonPanel.add(routerBox);
         
@@ -141,7 +141,15 @@ public class App extends JFrame {
     // Assigns routers and then starts the network running
     public void setupAndRunNetwork() {
         try {
-            net.createRouters(new FloodRouter.Generator());
+            Router.Generator gen = null;
+            switch (routerBox.getSelectedIndex()) {
+            case 0: gen = new FloodRouter.Generator(); break;
+            case 1: gen = new DistanceVectorRouter.Generator(); break;
+            case 2: gen = new LinkStateRouter.Generator(); break;
+            default: debug.println(0, "Coding error.  Router not recognized.  Using Flood.");
+                gen = new FloodRouter.Generator();
+            }
+            net.createRouters(gen);
             net.runNetwork(System.out, 10000, 1, 0.5);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(visPane, "Error running the network.",
