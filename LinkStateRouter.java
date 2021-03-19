@@ -21,9 +21,12 @@ public class LinkStateRouter extends Router {
     public LinkStateRouter(int nsap, NetworkInterface nic) {
         super(nsap, nic);
         debug = Debug.getInstance();  // For debugging!
+        table = new HashMap<Integer, Double>();
     }
 
     public void run() {
+
+    
         while (true) {
             // See if there is anything to process
             boolean process = false;
