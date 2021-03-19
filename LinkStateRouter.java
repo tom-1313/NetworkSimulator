@@ -16,7 +16,7 @@ public class LinkStateRouter extends Router {
     }
 
     Debug debug;
-    public HashMap<Router, Double> table;
+    public HashMap<int, Double> table;
     
     public LinkStateRouter(int nsap, NetworkInterface nic) {
         super(nsap, nic);
@@ -24,6 +24,9 @@ public class LinkStateRouter extends Router {
     }
 
     public void run() {
+
+        table = new Hashmap<>();
+        
         while (true) {
             // See if there is anything to process
             boolean process = false;
