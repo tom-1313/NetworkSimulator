@@ -5,6 +5,7 @@
  * Represents a router that uses a Distance Vector Routing algorithm.
  ***************/
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class LinkStateRouter extends Router {
     // A generator for the given LinkStateRouter class
@@ -15,6 +16,7 @@ public class LinkStateRouter extends Router {
     }
 
     Debug debug;
+    public HashMap<Router, Double> table;
     
     public LinkStateRouter(int nsap, NetworkInterface nic) {
         super(nsap, nic);
