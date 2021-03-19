@@ -28,6 +28,10 @@ public class LinkStateRouter extends Router {
 
     
         while (true) {
+        	
+        	for(int i : nic.getIncomingLinks()) {
+        		
+        	}
             // See if there is anything to process
             boolean process = false;
             NetworkInterface.TransmitPair toSend = nic.getTransmit();
