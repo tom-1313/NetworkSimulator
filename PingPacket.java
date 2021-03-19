@@ -1,6 +1,6 @@
 
 public class PingPacket extends Packet{
-	private boolean recieved;
+	private boolean received;
 	
 	public PingPacket(int destNsap, int senderNsap, int ID) {
 		super(destNsap, senderNsap, ID);
@@ -8,7 +8,7 @@ public class PingPacket extends Packet{
 	}
 	
 	public void recieved() {
-		recieved = true;
+		received = true;
 	}
 
 }
