@@ -14,6 +14,7 @@ import javax.swing.*;
 import java.awt.event.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.io.*;
+import java.util.HashMap;
 
 public class App extends JFrame {
     /**
@@ -33,7 +34,9 @@ public class App extends JFrame {
     private Debug debug = Debug.getInstance();
     JComboBox<String> routerBox;
     final private String[] routerChoices = { "Flood", "Distance Vector", "Link State" };
-        
+    JDialog debugWindow = null;
+    JDialog statsWindow = null;
+    
     /* Constructor: Sets up the initial look-and-feel */
     public App() {
         // Network administrative stuff first
@@ -90,10 +93,54 @@ public class App extends JFrame {
         buttonPanel.add(ppsLabel);
         mainPane.add(buttonPanel);
 
+        // Set up the debug window
+        setupDebugWindow();
+
+        // Set up the stats window
+        setupStatsWindow();
+        
         // Setup the menubar
         setupMenuBar();
+
+        // Create animation
+        Timer animationTimer;  // A Timer that will emit events to drive the animation.
+        animationTimer = new Timer(16, new ActionListener() {
+                long lastTimeCheck = System.currentTimeMillis();
+                public void actionPerformed(ActionEvent arg0) {
+                    long currTimeCheck = System.currentTimeMillis();
+                    advance(currTimeCheck - lastTimeCheck);
+                    lastTimeCheck = currTimeCheck;
+                    visPane.repaint();
+                }
+            });
+        animationTimer.start();
     }
 
+    // Basically a scrollable text area that shows contents of the debug output
+    // stream.  Which we will also create here.
+    private void setupDebugWindow() {
+        debugWindow = new JDialog(this, "Debug Output");
+        JTextArea debugTextArea;
+        debugTextArea  = new JTextArea(70,60);
+        debugTextArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(debugTextArea);
+        debugWindow.add(scrollPane);
+        debugWindow.setVisible(false);
+        debugWindow.pack();
+        debugWindow.setResizable(true);
+        debug.setStream(new PrintStream(new TextStreamer(debugTextArea)));
+    }
+
+    // Basically a window that periodically monitors the network stats and updates
+    // the information.
+    private void setupStatsWindow() {
+        statsWindow = new JDialog(this, "Statistics");
+        statsWindow.add(new JLabel("Network Stats!!!!"));
+        statsWindow.pack();
+        statsWindow.setVisible(false);
+        statsWindow.setResizable(true);
+    }
+    
     private void setupMenuBar() {
         JMenuBar mbar = new JMenuBar();
         JMenu menu;
@@ -134,6 +181,40 @@ public class App extends JFrame {
         mbar.add(menu);
         
         menu = new JMenu("Monitor");
+        menuAction = new AbstractAction("Show Stats") {
+                public void actionPerformed(ActionEvent event) {
+                    statsWindow.setLocationRelativeTo(statsWindow.getParent());
+                    statsWindow.setVisible(true);
+                }
+            };
+        menuAction.putValue(Action.SHORT_DESCRIPTION, "Show network statistics");
+        menuItem = new JMenuItem(menuAction);
+        menu.add(menuItem);
+        menuAction = new AbstractAction("Debug Console") {
+                public void actionPerformed(ActionEvent event) {
+                    debugWindow.setLocationRelativeTo(debugWindow.getParent());
+                    debugWindow.setVisible(true);
+                }
+            };
+        menuAction.putValue(Action.SHORT_DESCRIPTION, "Show debug console");
+        menuItem = new JMenuItem(menuAction);
+        menu.add(menuItem);
+        menuAction = new AbstractAction("Debug Level") {
+                public void actionPerformed(ActionEvent e) {
+                    String debugLevel = JOptionPane.showInputDialog("Please enter an integer to select debug level.");
+                    if (debugLevel != null && debugLevel.length() > 0) {
+                        try {
+                            int dl = Integer.parseInt(debugLevel);
+                            debug.setLevel(dl);
+                        } catch (NumberFormatException ignore) {
+                            JOptionPane.showMessageDialog(null, "The debug level [" + debugLevel + "] must be an integer.", "Number Format Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+                }
+            };
+        menuAction.putValue(Action.SHORT_DESCRIPTION, "Show network statistics");
+        menuItem = new JMenuItem(menuAction);
+        menu.add(menuItem);
         mbar.add(menu);
         setJMenuBar(mbar);
     }
@@ -157,9 +238,18 @@ public class App extends JFrame {
             debug.println(0, "Error running network: " + e.getMessage());
         }
     }
+
+    /**
+     *  Update any features of the images that need to be shown.
+     * In particular, update the stats file (or every so often)
+     * @params timeGapInMS How much time has elapsed since last call
+     **/
+    private void advance(long timeGapInMS) {
+    }
     
     public class VisPanel extends JPanel {
         Graphics2D g2;
+        double viewportSize = 100.0;
         
         public VisPanel() {
             setPreferredSize(new Dimension(1000,1000) ); // Set size of drawing area, in pixels.
@@ -171,7 +261,7 @@ public class App extends JFrame {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setPaint(new Color(200, 200, 220));
             g2.fillRect(0, 0, getWidth(), getHeight());
-            setupViewport(-100, 100, -100, 100);
+            setupViewport(-viewportSize, viewportSize, -viewportSize, viewportSize);
 
             drawNetwork();
         }
@@ -210,13 +300,151 @@ public class App extends JFrame {
         }
 
         private void drawNetwork() {
-            drawNode(0, 0, 5);
+            if (net == null) return;   // No network to display yet!
+            
+            if (nodeFont == null) {
+                // Create the node font
+                nodeFont = new Font("Serif", Font.BOLD, 18);
+            }
+
+            if (localNet == null) {
+                loadGraph();
+            }
+
+            // Draw the links
+            localNet.forEach((id, data) -> drawLinks(data));
+            
+            nodeFontMetrics = g2.getFontMetrics(nodeFont);  // Not sure if it changes as screen size changes for example. So getting it each redisplay
+            localNet.forEach((id, data) -> drawNode(data.x, data.y, 5, data.n.nsap+""));
+            // drawNode(0, 0, 5, "123");
+            // drawNode(0, 30, 5, "456");
+            // drawNode(30, 30, 5, "789");
         }
+
+        /**
+         * Stores a local copy of the graph into memory for displaying
+         **/
+        private class NodeData {
+            Network.Node n;   // The node itself
+            double x; // The x position of the node
+            double y; // The y position of the node
+
+            NodeData(Network.Node n) { this.n = n; x = 0; y = 0; }
+        }
+            
+        private HashMap<Integer, NodeData> localNet = null;
+        private void loadGraph() {
+            // First copy the nodes into the hashmap with space for the extra info needed
+            localNet = new HashMap<>();
+            net.forEachNode((id, node) -> localNet.put(id, new NodeData(node)));
+
+            // Space the nodes out evenly on a circle
+            double angleCount = Math.PI * 2.0/(localNet.size());
+            double angle = 0.0;
+            for (NodeData d: localNet.values()) {
+                d.x = viewportSize * Math.cos(angle);
+                d.y = viewportSize * Math.sin(angle);
+                angle += angleCount;
+            }
+        }
+
+        // Could make it configurable but why...
+        private Font nodeFont = null;
+        private FontMetrics nodeFontMetrics = null;
+        private Color nodeColor = new Color(0x87CEEB);
+        private Color linkColor = new Color(0x000080);
         
-        private void drawNode(double cx, double cy, double radius) {
-            g2.setPaint(Color.BLUE);
+        private void drawNode(double cx, double cy, double radius, String text) {
+            AffineTransform cs = g2.getTransform();
+            g2.translate(cx, cy);   // Make cx,cy the center... easier to think about.
+            
+            g2.setPaint(nodeColor);
+            g2.setStroke(new BasicStroke(1));
             double diam = radius*2;
-            g2.fill(new Ellipse2D.Double(cx-radius, cy-radius, diam, diam));
+            Ellipse2D circ = new Ellipse2D.Double(-radius, -radius, diam, diam);
+            g2.fill(circ);
+
+            g2.setColor(Color.BLACK);
+            g2.draw(circ);
+
+            if (text != null) {
+                // Compute the starting position of text so it is centered at cx,cy
+                // Determine the X coordinate for the text
+                // double x = cx - metrics.stringWidth(text) / 2.0;
+                // double y = cy + (metrics.getHeight()-metrics.getLeading()) / 2.0
+                Rectangle2D rec = nodeFontMetrics.getStringBounds(text, g2);
+                double x = -rec.getCenterX();
+                double y = -rec.getCenterY();  // Adding since y increases downward but still drops upward
+                double scaleFactor = radius*1.8/rec.getWidth();
+                g2.scale(scaleFactor, -scaleFactor);
+
+                // Set the font and draw String
+                g2.setColor(Color.BLACK);
+                g2.setFont(nodeFont);
+                g2.drawString(text, (float) x, (float) y);
+            }
+
+            g2.setTransform(cs);
+        }
+
+        /**
+         * Draw the link between this node and all of its outgoing neighbors
+         **/
+        private void drawLinks(NodeData source) {
+            g2.setPaint(linkColor);
+            g2.setStroke(new BasicStroke(0.2f));
+            
+            for (Network.Connection c: source.n.outgoingLinks) {
+                NodeData destination = localNet.get(c.destination.nsap);
+                Path2D arc = new Path2D.Double();
+                arc.moveTo(source.x, source.y);
+                double dx = destination.x - source.x;
+                double dy = destination.y - source.y;
+                double norm = viewportSize*0.1/Math.sqrt(dx*dx + dy*dy);
+                double midx = (destination.x + source.x)*0.5 - dy*norm;
+                double midy = (destination.y + source.y)*0.5 + dx*norm;
+                arc.quadTo(midx, midy, destination.x, destination.y);
+                g2.draw(arc);
+                // g2.draw(new Line2D.Double(source.x, source.y, destination.x, destination.y));
+            }
+        }
+    }
+
+    private class TextStreamer extends OutputStream {
+        JTextArea txt;
+        StringBuilder buffer;
+        static final int MAX_LENGTH = 100000;   // Maximum length of text area (in characters)
+        public TextStreamer(JTextArea txt) {
+            this.txt = txt;
+            this.buffer = new StringBuilder(256);
+        }
+
+        @Override
+        public void write(int b) throws IOException {
+            char c = (char) b;
+            this.buffer.append(c);
+            if (c == '\n') {
+                // Flush the buffer
+                flush();
+            }
+        }
+
+        @Override
+        public void flush() throws IOException {
+            if (this.buffer.length() > 0) {
+                // Transfer buffer to the TextArea, clear buffer, truncate if needed, and move caret
+                this.txt.append(this.buffer.toString());
+                this.buffer.setLength(0);  // Clear the buffer
+                String fullText = this.txt.getText();
+                int fullLen = fullText.length();
+                if (fullLen > MAX_LENGTH) {
+                    // Truncate (trim about half the text)
+                    String trunc = "..." + fullText.substring(fullLen - MAX_LENGTH/2);
+                    this.txt.setText(trunc);
+                    fullLen = trunc.length();
+                }
+                this.txt.setCaretPosition(fullLen);
+            }                
         }
     }
 }

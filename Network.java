@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.function.BiConsumer;
 
 public class Network {
     public class Node {
@@ -193,10 +194,18 @@ public class Network {
     public void printNetwork(PrintWriter out) {
         nodes.forEach((id, n) -> out.println(n));
     }
+
     public void printNetwork(PrintStream out) {
         nodes.forEach((id, n) -> out.println(n));
     }
 
+    /**
+     * Apply a function to each node in the network - mostly hopefully for display purposes only!
+     **/
+    public void forEachNode(BiConsumer<Integer, Node> action) {
+        nodes.forEach(action);
+    }
+    
     /**
      * Create routers for all the nodes on the network
      **/
@@ -247,10 +256,7 @@ public class Network {
         // Finished -- Sleep a few seconds to allow packets to arrive
         Thread.sleep(1000);
         debug.println(1, "Network simulation completed.  Displaying statistics...");
-        displayStats();
-        
-        // Kill all the jobs - just by exiting the program (LAZY but the routers don't have to self-destruct)
-        System.exit(0);
+        displayStats();        
     }
 
     /**
