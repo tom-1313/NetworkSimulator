@@ -119,7 +119,7 @@ public class App extends JFrame {
     // Basically a scrollable text area that shows contents of the debug output
     // stream.  Which we will also create here.
     private void setupDebugWindow() {
-        debugWindow = new JDialog(this, "Debug Output");
+        debugWindow = new JDialog(this, "Debug Output (Level " + debug.getLevel() + ")");
         JTextArea debugTextArea;
         debugTextArea  = new JTextArea(70,60);
         debugTextArea.setEditable(false);
@@ -206,6 +206,7 @@ public class App extends JFrame {
                         try {
                             int dl = Integer.parseInt(debugLevel);
                             debug.setLevel(dl);
+                            debugWindow.setTitle("Debug Output (Level " + debug.getLevel() + ")");
                         } catch (NumberFormatException ignore) {
                             JOptionPane.showMessageDialog(null, "The debug level [" + debugLevel + "] must be an integer.", "Number Format Error", JOptionPane.ERROR_MESSAGE);
                         }
