@@ -52,8 +52,9 @@ public class NetworkInterface {
     public PingPacket sendPacket(int ID, int destination) {
     	PingPacket newPacket = new PingPacket(destination, nsap, ID);
     	Timer newTimer = new Timer(0, null);
-    	newTimer.start()
+    	newTimer.start();
     	pingTable.put(ID, newTimer);
+    	return newPacket;
     }
     
     /** Return the NSAP ID for this NIC **/
