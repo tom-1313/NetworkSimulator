@@ -15,6 +15,7 @@ import java.awt.event.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.io.*;
 import java.util.HashMap;
+import java.text.NumberFormat;
 
 public class App extends JFrame {
     /**
@@ -133,12 +134,56 @@ public class App extends JFrame {
 
     // Basically a window that periodically monitors the network stats and updates
     // the information.
+    private JTextArea statsTextArea = null;
     private void setupStatsWindow() {
         statsWindow = new JDialog(this, "Statistics");
-        statsWindow.add(new JLabel("Network Stats!!!!"));
+        statsTextArea = new JTextArea(10, 40);
+        statsTextArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(statsTextArea);
+        statsWindow.add(scrollPane);
         statsWindow.pack();
         statsWindow.setVisible(false);
         statsWindow.setResizable(true);
+    }
+
+    private NumberFormat statsFormat = null;
+    private Font statsFont = null;
+    private void refreshStatsWindow() {
+        if (statsFont == null) {
+            // Create the node font
+            statsFont = new Font("Monospaced", Font.BOLD, 14);
+        }
+        statsTextArea.setFont(statsFont);
+        
+        if (net == null) {
+            statsTextArea.setText("No network loaded yet.");
+        } else {
+            Network.Stat stat = net.getStats();
+            if (stat == null) {
+                statsTextArea.setText("Network has no statistics yet ready to track.");
+            } else {
+                if (statsFormat == null) {
+                    statsFormat = NumberFormat.getNumberInstance();
+                    statsFormat.setMaximumFractionDigits(3);
+                    statsFormat.setMinimumFractionDigits(3);
+                }
+                    
+                StringBuilder sb = new StringBuilder();
+                sb.append("Packets transmitted: " + stat.getTotalPacketsSent());
+                sb.append("\nPackets received:    " + stat.getPacketsReceived());
+                sb.append("\nSuccess percentage:  ");
+                if (stat.getTotalPacketsSent() > 0)
+                    sb.append(statsFormat.format(100.0 * (double) stat.getPacketsReceived()/(double) stat.getTotalPacketsSent()) + "%");
+                else
+                    sb.append("---");
+                sb.append("\nDuplicate packets:   " + stat.getDuplicatePackets());
+                sb.append("\nAverage time taken:  " + statsFormat.format(stat.getMeanTimeTaken()) + " ms");
+                sb.append("\nEWMA time taken:     " + statsFormat.format(stat.getEWMATimeTaken()) + " ms");
+                String sbString = sb.toString();
+                statsTextArea.setText(sbString);
+            }
+        }
+        statsTextArea.setCaretPosition(statsTextArea.getText().length());
     }
     
     private void setupMenuBar() {
@@ -245,7 +290,17 @@ public class App extends JFrame {
      * In particular, update the stats file (or every so often)
      * @params timeGapInMS How much time has elapsed since last call
      **/
+    private long statsDelayRemaining = 0;
+    private final long STATS_DELAY = 1000;  // How long between stats updates
     private void advance(long timeGapInMS) {
+        statsDelayRemaining -= timeGapInMS;
+        if (statsDelayRemaining <= 0) {
+            // Reset
+            statsDelayRemaining = STATS_DELAY;
+
+            // And update the stats panel
+            refreshStatsWindow();
+        } 
     }
     
     public class VisPanel extends JPanel {

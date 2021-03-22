@@ -91,16 +91,66 @@ public class Network {
         }
     }
 
+    /**
+     * The total stats for the given network.
+     **/
+    public class Stat {
+        private int packetsReceived;
+        private int duplicatePackets;
+        private double meanTimeTaken;  // average time taken per packet
+        private double ewmaTimeTaken;  // exponentially weighted moving average of time taken
+        private double alpha;          // The exponentially weighting decrease
+        private ArrayList<PacketStat> packetsSent;  // Used to track the number of packets transmitted
+        public Stat() {
+            packetsReceived = 0;
+            duplicatePackets = 0;
+            meanTimeTaken = 0;
+            ewmaTimeTaken = 0;
+            alpha = 0.1;
+            packetsSent = new ArrayList<>();
+        }
+
+        /**
+         * Clone/copy other stat to this new Stat
+         **/
+        private Stat(Stat other) {
+            this.packetsReceived = other.packetsReceived;
+            this.duplicatePackets = other.duplicatePackets;
+            this.meanTimeTaken = other.meanTimeTaken;
+            this.ewmaTimeTaken = other.ewmaTimeTaken;
+            this.alpha = other.alpha;
+            this.packetsSent = other.packetsSent;  // WARNING: NOT A DEEP COPY!!!
+        }
+
+        @Override
+        protected synchronized Object clone() {
+            return new Stat(this);
+        }
+
+        public synchronized void add(PacketStat p) { packetsSent.add(p); }
+        public synchronized int getTotalPacketsSent() { return packetsSent.size(); }
+        public synchronized int getPacketsReceived() { return packetsReceived; }
+        public synchronized void increaseDuplicatePackets() { duplicatePackets++; }
+        public synchronized int getDuplicatePackets() { return duplicatePackets; }
+        public void updateTimeTakenForNewArrival(long tt) {
+            packetsReceived++;
+            meanTimeTaken = meanTimeTaken + (tt - meanTimeTaken)/packetsReceived;  // Update the average: [att*(n-1) + tt]/n
+            ewmaTimeTaken = ewmaTimeTaken*(1-alpha) + tt*alpha;
+        }
+        public double getEWMATimeTaken() { return ewmaTimeTaken; }
+        public double getMeanTimeTaken() { return meanTimeTaken; }
+    }
+
+    // Statistics to track for a SINGLE packet
     private int packetNumberCount = 1;
-    private class Stat {
-        // Statistics to track for a packet
+    private class PacketStat {
         int source;
         int dest;
         int packetNumber;       // The specific one being created (an ID)
         long startTime;         // Time at which packet was created
         long timeTaken;         // Time taken to arrive, -1 means not yet arrived.
         long arrivals;          // Number of times arrived (to track duplicates)
-        public Stat(int source, int dest) {
+        public PacketStat(int source, int dest) {
             this.source = source;
             this.dest = dest;
             this.packetNumber = packetNumberCount;
@@ -118,13 +168,13 @@ public class Network {
     private Random rand;  // Random number generator for randomizing behaviour
     private HashMap<Integer, Node> nodes;
     private Debug debug;
-    private ArrayList<Stat> packetsSent;  // Used to track the number of packets transmitted
+    private Stat stats;  // Stats for this network
     
     public Network() {
         nodes = new HashMap<>();
         rand = new Random();
         debug = Debug.getInstance();
-        packetsSent = new ArrayList<>();
+        stats = new Stat();
     }
 
     /**
@@ -246,9 +296,8 @@ public class Network {
                 if (end >= start) end++;   // This way we don't have start to start
                 Integer source = nsaps.get(start);
                 Integer dest = nsaps.get(end);
-                Stat stat = new Stat(source, dest);
-                packetsSent.add(stat);
-                transmit(source, dest, stat);
+                PacketStat aPacket = new PacketStat(source, dest);
+                transmit(source, dest, aPacket);
             }                
             Thread.sleep(1);  // Pause for a millisecond and resume
         }
@@ -260,15 +309,22 @@ public class Network {
     }
 
     /**
+     * Return a (copy of) the current stats
+     **/
+    public Stat getStats() {
+        return (Stat) stats.clone();
+    }
+    
+    /**
      * Report some statistics on the network performance
      **/
     private void displayStats() {
         // First compute the statistics
-        int packetsTransmitted = packetsSent.size();
+        int packetsTransmitted = stats.packetsSent.size();
         int packetsReceived = 0;
         int duplicatePackets = 0;
         double averagePacketTime = 0.0;
-        for (Stat s: packetsSent) {
+        for (PacketStat s: stats.packetsSent) {
             if (s.arrivals > 0) {
                 packetsReceived++;
                 duplicatePackets += (s.arrivals - 1);  // How many duplicates were sent to final destination
@@ -286,10 +342,11 @@ public class Network {
     /**
      * "Transmit" data from source to destination in the network
      **/
-    private void transmit(Integer source, Integer dest, Stat data) {
+    private void transmit(Integer source, Integer dest, PacketStat data) {
         Node s = nodes.get(source);
         if (s.remainingDown > 0) return;   // Source is still down, can't transmit.
         debug.println(3, "Transmitting from " + source + " to " + dest);
+        stats.add(data);  // Record the transmission
         s.r.nic.transmit(dest, data);
     }
 
@@ -297,18 +354,20 @@ public class Network {
      * "Received" data at destination - for tracking purposes
      **/
     public void receive(Integer dest, Object data) {
-        if (data instanceof Stat) {
-            Stat payload = (Stat) data;
+        if (data instanceof PacketStat) {
+            PacketStat payload = (PacketStat) data;
             synchronized (payload) {
                 if (payload.dest != dest) {
-                    debug.println(0, "Error: The payload did not arrive at the proper destination.");
+                    debug.println(0, "Coding Error: The payload did not arrive at the proper destination.");
                 } else if (payload.timeTaken == -1) {
                     // Packet has newly arrived
                     payload.timeTaken = System.currentTimeMillis() - payload.startTime;
                     payload.arrivals++;
+                    stats.updateTimeTakenForNewArrival(payload.timeTaken);
                 } else {
                     debug.println(5, "Duplicate packet arrived. Packet: " + payload);
                     payload.arrivals++;
+                    stats.increaseDuplicatePackets();
                 }
             }
         } else {
