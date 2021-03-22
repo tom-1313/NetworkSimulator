@@ -25,6 +25,7 @@ public class Debug {
     public int getLevel() { return level; }
     public void setLevel(int level) { this.level = level; }
     public void setStream(PrintStream err) { this.err = err; }
+    public PrintStream getStream() { return this.err; }
     public void println(int level, String message) {
         if (this.level >= level) {
             synchronized (err) {

@@ -33,7 +33,9 @@ public class App extends JFrame {
     private Network net;
     private VisPanel visPane;
     private Debug debug = Debug.getInstance();
-    JComboBox<String> routerBox;
+    JComboBox<String> routerBox = null;
+    JButton runButton = null;
+    JTextField pps = null;
     final private String[] routerChoices = { "Flood", "Distance Vector", "Link State" };
     JDialog debugWindow = null;
     JDialog statsWindow = null;
@@ -72,24 +74,69 @@ public class App extends JFrame {
         // Run/Reset network button
         Action runAction = new AbstractAction("Run") {
                 public void actionPerformed(ActionEvent e) {
-                    this.setEnabled(false);  // No more changes allowed
-                    routerBox.setEnabled(false);  // No more changes allowed
-                    Thread netRun = new Thread() {
-                            public void run() {
-                                setupAndRunNetwork();
-                            }
-                        };
-                    netRun.start();
+                    if (runButton.getText().equals("Run")) {
+                        // Run the network
+                        routerBox.setEnabled(false);  // No more changes allowed
+                        Thread netRun = new Thread() {
+                                public void run() {
+                                    setupNetwork();
+                                    runNetwork();
+                                }
+                            };
+                        runButton.setText("Pause");
+                        netRun.start();
+                    } else if (runButton.getText().equals("Pause")) {
+                        // Stop the network
+                        net.setNetworkRunning(false);
+                        runButton.setText("Resume");
+                    } else if (runButton.getText().equals("Resume")) {
+                        Thread netRun = new Thread() {
+                                public void run() {
+                                    runNetwork();
+                                }
+                            };
+                        runButton.setText("Pause");
+                        netRun.start();
+                    }
                 }
             };
         runAction.putValue(Action.SHORT_DESCRIPTION, "Start the network running.");
-        JButton runButton = new JButton(runAction);
+        runButton = new JButton(runAction);
         runButton.setAlignmentX(JButton.CENTER_ALIGNMENT);
+        runButton.setEnabled(false);  // Not enabled until a network is loaded!
         buttonPanel.add(runButton);
         
         // JTextField: Packets/Second
-        JTextField pps = new JTextField("100");
+        pps = new JTextField("0");
+        pps.setEditable(false);  // Not editable until network is loaded
+        pps.setHorizontalAlignment(JTextField.RIGHT);
         JLabel ppsLabel = new JLabel("Packets/sec");
+        ppsLabel.setAlignmentX(JLabel.LEFT_ALIGNMENT);
+        Action ppsAction = new AbstractAction("Packets/Second") {
+                public void actionPerformed(ActionEvent e) {
+                    if (net == null) {
+                        debug.println(0, "ppsAction: Coding error.  Net should be active before this field is editable!");
+                        pps.setText("0");
+                        return;
+                    }
+                    try {
+                        // Packets per second has changed!
+                        int ppsValue = Integer.parseInt(pps.getText());
+                        if (ppsValue < 0) {
+                            JOptionPane.showMessageDialog(visPane, "The Packets Per Second must be a positive integer.",
+                                                          "Error", JOptionPane.ERROR_MESSAGE);
+                            pps.setText(net.getPacketFrequency()+"");
+                        } else {
+                            net.setPacketFrequency(ppsValue);
+                        }
+                    } catch (NumberFormatException ignored) {
+                        JOptionPane.showMessageDialog(visPane, "The Packets Per Second must be a valid positive integer.",
+                                                      "Error", JOptionPane.ERROR_MESSAGE);
+                        pps.setText(net.getPacketFrequency()+"");
+                    }
+                }
+            };
+        pps.addActionListener(ppsAction);
         buttonPanel.add(pps);
         buttonPanel.add(ppsLabel);
         mainPane.add(buttonPanel);
@@ -122,7 +169,7 @@ public class App extends JFrame {
     private void setupDebugWindow() {
         debugWindow = new JDialog(this, "Debug Output (Level " + debug.getLevel() + ")");
         JTextArea debugTextArea;
-        debugTextArea  = new JTextArea(70,60);
+        debugTextArea  = new JTextArea(50,60);
         debugTextArea.setEditable(false);
         JScrollPane scrollPane = new JScrollPane(debugTextArea);
         debugWindow.add(scrollPane);
@@ -213,6 +260,8 @@ public class App extends JFrame {
                             net = new Network();
                             networkFile = chooser.getSelectedFile().getName();
                             net.loadNetwork(networkFile);
+                            runButton.setEnabled(true);  // Enable the run button so network can be run!
+                            pps.setEditable(true);       // Enable editing this value now that network has loaded.
                         } catch (Exception e) {
                             JOptionPane.showMessageDialog(visPane, "Error loading network: " + networkFile + "\n", "Error", JOptionPane.ERROR_MESSAGE);
                             net = null;  // Clear it back out.  So, it can be loaded again.
@@ -266,7 +315,7 @@ public class App extends JFrame {
     }
 
     // Assigns routers and then starts the network running
-    public void setupAndRunNetwork() {
+    public void setupNetwork() {
         try {
             Router.Generator gen = null;
             switch (routerBox.getSelectedIndex()) {
@@ -277,14 +326,23 @@ public class App extends JFrame {
                 gen = new FloodRouter.Generator();
             }
             net.createRouters(gen);
-            net.runNetwork(System.out, 10000, 1, 0.5);
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(visPane, "Error running the network.",
-                                                      "Error", JOptionPane.ERROR_MESSAGE);
-            debug.println(0, "Error running network: " + e.getMessage());
+            JOptionPane.showMessageDialog(visPane, "Error setting up the network.",
+                                          "Error", JOptionPane.ERROR_MESSAGE);
+            debug.println(0, "Error setting up the network: " + e.getMessage());
         }
     }
 
+    public void runNetwork() {
+        try {
+            net.runNetwork(debug.getStream(), -1);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(visPane, "Error running the network.",
+                                          "Error", JOptionPane.ERROR_MESSAGE);
+            debug.println(0, "Error running network: " + e.getMessage());
+        }
+    }
+    
     /**
      *  Update any features of the images that need to be shown.
      * In particular, update the stats file (or every so often)
@@ -398,8 +456,8 @@ public class App extends JFrame {
             double angleCount = Math.PI * 2.0/(localNet.size());
             double angle = 0.0;
             for (NodeData d: localNet.values()) {
-                d.x = viewportSize * Math.cos(angle);
-                d.y = viewportSize * Math.sin(angle);
+                d.x = viewportSize * 0.9 * Math.cos(angle);
+                d.y = viewportSize * 0.9 * Math.sin(angle);
                 angle += angleCount;
             }
         }

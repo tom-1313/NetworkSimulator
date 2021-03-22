@@ -275,20 +275,65 @@ public class Network {
             });
     }
     
+    private int packetFrequency = 0;
+    public void setPacketFrequency(int p) { packetFrequency = p; }
+    public int getPacketFrequency() { return packetFrequency; }
+    
     /**
      * Simulate the network running for length milliseconds
      * @params out The output stream to use for messages
      * @params length The number of milliseconds to run the simulation
-     * @params meanQuantity The average number of packets to transmit per millisecond
-     * @parmas stdQuantity  The standard deviation for the transmission
-     * Each millisecond, roughly quantity packets are generated between random nodes
+     * @params packetFrequency The number of packets to transmit per second
+     * Each second, roughly quantity packets are generated between random nodes
      **/
-    public void runNetwork(PrintStream out, long length, double meanQuantity, double stdQuantity) throws InterruptedException {
+    public void runNetwork(PrintStream out, long length, int packetFrequency) throws InterruptedException {
+        setPacketFrequency(packetFrequency);
+        runNetwork(out, length);
+
+        // Finished -- Sleep a few seconds to allow packets to arrive
+        Thread.sleep(1000);
+        debug.println(1, "Network simulation completed.  Displaying statistics...");
+        displayStats();        
+    }
+
+    private boolean networkRunning = false;
+    public synchronized void setNetworkRunning(boolean flag) { networkRunning = flag; }
+    
+    /**
+     * Simulate the network running for length milliseconds (-1 means "forever")
+     * @params out The output stream to use for messages
+     * @params length The number of milliseconds to run the simulation
+     * Each second roughly packetFrequency packets are generated between random nodes.  Uses instance variable which allows changing value while running.
+     **/
+    private final int MIN_SLEEP = 10;
+    public void runNetwork(PrintStream out, long length) throws InterruptedException {
         List<Integer> nsaps = new ArrayList<Integer>(nodes.keySet());
-        long endTime = System.currentTimeMillis() + length;
-        while (System.currentTimeMillis() < endTime) {
-            // Determine how many packets to generate
-            int generate = (int) Math.round(rand.nextGaussian()*stdQuantity + meanQuantity);
+
+        long endTime = -1;
+        if (length >= 0) {
+            // "Infinite" time
+            endTime = System.currentTimeMillis() + length;
+        }
+        setNetworkRunning(true);
+        double minRate = 1000.0/MIN_SLEEP;
+        while (networkRunning) {            
+            // Determine how many packets to generate (and how long to pause for next generation)
+            int pf = getPacketFrequency();
+            int sleepTime;
+            int generate;
+            if (pf == 0) {
+                // Nothing to generate
+                sleepTime = MIN_SLEEP;
+                generate = 0;
+            } else if (pf > minRate) { 
+                // Too many for one at a time... generate multiple per 10ms pattern
+                sleepTime = MIN_SLEEP;
+                generate = (int) Math.floor(pf/minRate + rand.nextDouble());
+            } else {
+                // Can generate 1 and then sleep for a sufficient amount of time to keep up the rate
+                generate = 1;
+                sleepTime = (int) Math.floor(1000.0/pf + rand.nextDouble());
+            }
             for (int i = 0; i < generate; i++) {
                 // And generate each packet
                 int start = rand.nextInt(nsaps.size());
@@ -299,13 +344,12 @@ public class Network {
                 PacketStat aPacket = new PacketStat(source, dest);
                 transmit(source, dest, aPacket);
             }                
-            Thread.sleep(1);  // Pause for a millisecond and resume
+            // Has time run out? (If it was set at all)
+            if (endTime >= 0 && System.currentTimeMillis() > endTime) setNetworkRunning(false);
+            else {
+                Thread.sleep(sleepTime);  // Pause for a few milliseconds and resume
+            }
         }
-
-        // Finished -- Sleep a few seconds to allow packets to arrive
-        Thread.sleep(1000);
-        debug.println(1, "Network simulation completed.  Displaying statistics...");
-        displayStats();        
     }
 
     /**
