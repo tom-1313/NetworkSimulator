@@ -1,7 +1,7 @@
 /***************
  * DistanceVectorRouter
  * Author: Christian Duncan
- * Modified by: 
+ * Modified by: Adam Curley, Tom Gadacy, Matt Hendrickson, Andrew DePass
  * Represents a router that uses a Distance Vector Routing algorithm.
  ***************/
 import java.util.ArrayList;
