@@ -9,6 +9,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class DistanceVectorRouter extends Router {
+    /*
+    TODO: 1. Create a Table for the neighboring Routers based on the fastest times from the ping. 2. Create a thread that updates the table every so often
+     */
+
     // A generator for the given DistanceVectorRouter class
     public static class Generator extends Router.Generator {
         public Router createRouter(int id, NetworkInterface nic) {
@@ -73,6 +77,7 @@ public class DistanceVectorRouter extends Router {
             NetworkInterface.TransmitPair toSend = nic.getTransmit();
             if (toSend != null) {
                 // There is something to send out
+                // Check the table to see what route is the fastest to the destination, send it to that router
                 process = true;
                 debug.println(3, "(DistanceVectorRouter.run): I am being asked to transmit: " + toSend.data + " to the destination: " + toSend.destination);
                 //route(-1, new Packet(nsap, toSend.destination, 5, toSend.data));
@@ -81,6 +86,8 @@ public class DistanceVectorRouter extends Router {
             NetworkInterface.ReceivePair toRoute = nic.getReceived();
             if (toRoute != null) {
                 // There is something to route through - or it might have arrived at destination
+                // if the destination = this router, do nothing
+                // else send it to the fastest router based on the table
                 process = true;
                 //debug.println(3, "(DistanceVectorRouter.run): I am being asked to transmit: " + toRoute.data + " to the destination: " + toRoute.destination);
                 processPacket(toRoute.originator, toRoute.data);
