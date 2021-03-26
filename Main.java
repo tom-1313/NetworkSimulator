@@ -6,7 +6,7 @@ public class Main {
         if (args.length > 0) {
             networkFile = args[0];
         }
-        Debug.getInstance().setLevel(1);  // Set debug level for more verbose output (higher = more verbose)
+        Debug.getInstance().setLevel(4);  // Set debug level for more verbose output (higher = more verbose)
         
         Network net = new Network();
         try {
@@ -17,7 +17,7 @@ public class Main {
         }
 
         net.printNetwork(System.out);
-        net.createRouters(new DistanceVectorRouter.Generator());
+        net.createRouters(new LinkStateRouter.Generator());
         
         try {
             net.runNetwork(System.out, 10000, 100);
