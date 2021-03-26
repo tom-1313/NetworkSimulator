@@ -2,8 +2,8 @@
 public class PingPacket extends Packet{
 	private boolean received;
 	
-	public PingPacket(int destNsap, int senderNsap, int ID) {
-		super(destNsap, senderNsap, ID);
+	public PingPacket(int source, int dest, int hopCount, Object payload) {
+		super(source, dest, hopCount, payload);
 		// TODO Auto-generated constructor stub
 	}
 	
