@@ -27,11 +27,11 @@ public class LinkStateRouter extends Router {
 
 	public void run() {
 
-    
+		nic.transmit(27, new Packet(nsap, 27, 20, "hi"));
+    	
         while (true) {
         	
         	boolean process = false;
-        	nic.sendOnLink(100, new PingPacket(nsap, 100, 20));
         	
             // See if there is anything to process
             NetworkInterface.TransmitPair toSend = nic.getTransmit();
@@ -50,7 +50,7 @@ public class LinkStateRouter extends Router {
             if (toRoute != null) {
                 // There is something to route through - or it might have arrived at destination
                 process = true;
-                if (toRoute.data instanceof Packet) {
+                if (toRoute.data instanceof Packet && !(toRoute.data instanceof PingPacket)) {
                     Packet p = (Packet) toRoute.data;
                     if (p.dest == nsap) {
                         // It made it!  Inform the "network" for statistics tracking purposes
@@ -68,7 +68,7 @@ public class LinkStateRouter extends Router {
                 }else if(toRoute.data instanceof PingPacket) {
                 	//We process our ping data
                 	PingPacket p = (PingPacket) toRoute.data;
-                	
+                	debug.println(1, "WE FUCKING SENT A PING PACKET YAAAAAY");
                 	//If our packet has been recieved, and the destination is the original sender
                 	if(p.dest == nsap && p.isRecieved()) {
                 		debug.println(4, "(LinkStateRouter.run): PingPacket has arrived!  Reporting to the NIC - for accounting purposes!");

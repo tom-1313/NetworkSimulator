@@ -6,7 +6,7 @@ public class Main {
         if (args.length > 0) {
             networkFile = args[0];
         }
-        Debug.getInstance().setLevel(4);  // Set debug level for more verbose output (higher = more verbose)
+        Debug.getInstance().setLevel(2);  // Set debug level for more verbose output (higher = more verbose)
         
         Network net = new Network();
         try {
