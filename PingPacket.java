@@ -5,7 +5,16 @@ public class PingPacket extends Packet{
 	public PingPacket(int source, int dest, int hopCount, Object payload) {
 		super(source, dest, hopCount, payload);
 		// TODO Auto-generated constructor stub
-		
+		payload = null;
+		hopCount = 0;
+	}
+
+	public Pingpacket(int source, int dest, int ID)
+	{
+		ID = this.ID;
+		source = this.source;
+		dest = this.dest;
+
 	}
 	
 	public void recieved() {
