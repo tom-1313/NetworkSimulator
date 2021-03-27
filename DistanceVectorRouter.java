@@ -136,11 +136,7 @@ public class DistanceVectorRouter extends Router {
 
         routeMap = tempMap; //makes it the new map (might need to be synchronized)
     }
-
-    public void fuckingpingpacket {
-        
-    }
-
+    
     /** Route the given packet out.
     In our case, we go to all nodes except the originator
     **/
