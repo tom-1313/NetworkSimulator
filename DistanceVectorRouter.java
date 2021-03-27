@@ -80,7 +80,7 @@ public class DistanceVectorRouter extends Router {
                 // Check the table to see what route is the fastest to the destination, send it to that router
                 process = true;
                 debug.println(3, "(DistanceVectorRouter.run): I am being asked to transmit: " + toSend.data + " to the destination: " + toSend.destination);
-                //route(-1, new Packet(nsap, toSend.destination, 5, toSend.data));
+                route(-1, new Packet(nsap, toSend.destination, 5, toSend.data));
             }
 
             NetworkInterface.ReceivePair toRoute = nic.getReceived();
@@ -103,9 +103,9 @@ public class DistanceVectorRouter extends Router {
     private void processPacket(int originator, Object data) {
         if (data instanceof DistPacket) {
             DistPacket p = (DistPacket) data;
+            //System.out.println(p.distTable.get(originator).link);
+            neighborMap.add(p.distTable);
         }
-
-        System.out.println("");
     }
 
     private void recalculate() {
@@ -113,11 +113,13 @@ public class DistanceVectorRouter extends Router {
         Map<Integer, DLPair> tempMap = new HashMap<>();
         tempMap.put(nic.getNSAP(), new DLPair(0, -1));
 
-        // build the table from the neighbors (don't have yet)
+        // Map<Integer, DLPair>
+        // build the table from the neighbors
         // for debugging print out the list of tables
         for (int i = 0; i < neighborMap.size(); i++) {
-            debug.println(0, "Link " + i);
-            neighborMap.get(i).forEach((id, dl) -> debug.println(0, "node: " + id + " distance = " + dl.distance + " link: " + dl.link));
+            //debug.println(0, "Link " + i);
+            //neighborMap.get(i).forEach((id, dl) -> debug.println(0, "node: " + id + " distance = " + dl.distance + " link: " + dl.link));
+            neighborMap.get(i).forEach((id, dl) -> tempMap.put(id, new DLPair(dl.distance, dl.link)));
         }
 
         // transmit table to the neighbors
@@ -133,6 +135,10 @@ public class DistanceVectorRouter extends Router {
         }
 
         routeMap = tempMap; //makes it the new map (might need to be synchronized)
+    }
+
+    public void fuckingpingpacket {
+        
     }
 
     /** Route the given packet out.
