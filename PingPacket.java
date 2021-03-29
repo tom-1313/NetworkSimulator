@@ -1,12 +1,14 @@
 
 public class PingPacket extends Packet{
 	private boolean received;
+	private long timeInMillis;
 	
-	public PingPacket(int source, int dest, int hopCount) {
-		super(source, dest, hopCount, null);
+	public PingPacket(int source, long timeInMillis) {
+		super(source, -1, 99999, null);
 		// TODO Auto-generated constructor stub
 		payload = null;
-		hopCount = 0;
+		hopCount = 99999;
+		this.timeInMillis = timeInMillis;
 	}
 	
 	public void recieved() {
@@ -14,6 +16,9 @@ public class PingPacket extends Packet{
 	}
 	public boolean isRecieved() {
 		return received;
+	}
+	public long getStartTime() {
+		return timeInMillis;
 	}
 
 }
