@@ -68,7 +68,7 @@ public class LinkStateRouter extends Router {
                 }else if(toRoute.data instanceof PingPacket) {
                 	//We process our ping data
                 	PingPacket p = (PingPacket) toRoute.data;
-                	debug.println(1, "WE FUCKING SENT A PING PACKET YAAAAAY");
+                	debug.println(1, "WE SENT A PING PACKET YAAAAAY");
                 	//If our packet has been recieved, and the destination is the original sender
                 	if(p.dest == nsap && p.isRecieved()) {
                 		debug.println(4, "(LinkStateRouter.run): PingPacket has arrived!  Reporting to the NIC - for accounting purposes!");
