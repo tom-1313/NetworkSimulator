@@ -121,15 +121,15 @@ public class NetworkInterface {
             return;
         }
     	
-    	if(payload instanceof PingPacket) {
-    		PingPacket payloadPing = (PingPacket) payload;
-    		int temp = payloadPing.destNsap;
-    		payloadPing.destNsap = payloadPing.senderNsap;
-    		payloadPing.senderNsap = temp;
-    		payloadPing.recieved();
-    		
-    		//Send it back!
-    	}
+//    	if(payload instanceof PingPacket) {
+//    		PingPacket payloadPing = (PingPacket) payload;
+//    		int temp = payloadPing.destNsap;
+//    		payloadPing.destNsap = payloadPing.senderNsap;
+//    		payloadPing.senderNsap = temp;
+//    		payloadPing.recieved();
+//
+//    		//Send it back!
+//    	}
         
     	if (receivedQueue.size() < capacity) {
             // There is room to add it

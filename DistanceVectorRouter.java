@@ -10,7 +10,7 @@ import java.util.Map;
 
 public class DistanceVectorRouter extends Router {
     /*
-    TODO: 1. Create a Table for the neighboring Routers based on the fastest times from the ping. 2. Create a thread that updates the table every so often
+    TODO:
      */
 
     // A generator for the given DistanceVectorRouter class
@@ -25,13 +25,17 @@ public class DistanceVectorRouter extends Router {
         int source;
         int dest;
         int hopCount;  // Maximum hops to get there
-        Object payload;  // The payload!
-        
+        long starTime = System.currentTimeMillis();
+        Object payload;
+        boolean arrived = false; //if true, packet arrived at destination send back.
+
+
         public Packet(int source, int dest, int hopCount, Object payload) {
             this.source = source;
             this.dest = dest;
             this.hopCount = hopCount;
             this.payload = payload;
+
         }
     }
 
@@ -39,6 +43,7 @@ public class DistanceVectorRouter extends Router {
     public static class DistPacket {
         Map<Integer, DLPair> distTable;
 
+        //Integer = Router, DLPair = distance to the Router and the link to send it on
         public DistPacket(Map<Integer, DLPair> distTable) {
             this.distTable = distTable;
         }
@@ -58,8 +63,10 @@ public class DistanceVectorRouter extends Router {
     Debug debug;
     private Map<Integer, DLPair> routeMap = new HashMap<>(); // Integer and Pair (Distance and Link) used for routing
     private ArrayList<Map<Integer, DLPair>> neighborMap = new ArrayList<>();
+    private ArrayList<Integer> outLinks = nic.getOutgoingLinks();
     private long nextRecalcTime;
     private static final long TIME_BETWEEN_RECALC = 1000; // (milliseconds)
+
     
     public DistanceVectorRouter(int nsap, NetworkInterface nic) {
         super(nsap, nic);
@@ -70,6 +77,7 @@ public class DistanceVectorRouter extends Router {
     public void run() {
         while (true) {
             if (System.currentTimeMillis() >= nextRecalcTime) {
+                pingNeigbhors();
                 recalculate();
             }
             // See if there is anything to process
@@ -79,8 +87,9 @@ public class DistanceVectorRouter extends Router {
                 // There is something to send out
                 // Check the table to see what route is the fastest to the destination, send it to that router
                 process = true;
-                debug.println(3, "(DistanceVectorRouter.run): I am being asked to transmit: " + toSend.data + " to the destination: " + toSend.destination);
-                route(-1, new Packet(nsap, toSend.destination, 5, toSend.data));
+//                debug.println(0, "(DistanceVectorRouter.run): I am being asked to transmit: " + toSend.data + " to the destination: " + toSend.destination);
+                route(toSend.destination, new Packet(nsap, toSend.destination,0, toSend.data));
+
             }
 
             NetworkInterface.ReceivePair toRoute = nic.getReceived();
@@ -95,7 +104,7 @@ public class DistanceVectorRouter extends Router {
 
             if (!process) {
                 // Didn't do anything, so sleep a bit
-                try { Thread.sleep(1); } catch (InterruptedException e) { }
+                try { Thread.sleep(50); } catch (InterruptedException e) { }
             }
         }
     }
@@ -103,8 +112,19 @@ public class DistanceVectorRouter extends Router {
     private void processPacket(int originator, Object data) {
         if (data instanceof DistPacket) {
             DistPacket p = (DistPacket) data;
-            //System.out.println(p.distTable.get(originator).link);
             neighborMap.add(p.distTable);
+        }
+        if (data instanceof Packet) {
+            Packet packet = (Packet) data;
+            if (packet.dest == nic.getNSAP()) {
+                packet.arrived = true;
+                outLinks = nic.getOutgoingLinks();
+                nic.sendOnLink(outLinks.indexOf(originator), packet);
+            } else if (packet.arrived = true) {
+                //Update the time on the neighbor map
+                routeMap.put(packet.dest, new DLPair(System.currentTimeMillis() - packet.starTime, outLinks.indexOf(originator)) );
+                neighborMap.add(routeMap);
+            }
         }
     }
 
@@ -117,9 +137,8 @@ public class DistanceVectorRouter extends Router {
         // build the table from the neighbors
         // for debugging print out the list of tables
         for (int i = 0; i < neighborMap.size(); i++) {
-            //debug.println(0, "Link " + i);
-            //neighborMap.get(i).forEach((id, dl) -> debug.println(0, "node: " + id + " distance = " + dl.distance + " link: " + dl.link));
-            neighborMap.get(i).forEach((id, dl) -> tempMap.put(id, new DLPair(dl.distance, dl.link)));
+//            neighborMap.get(i).forEach((id, dl) -> debug.println(0, "node: " + id + " distance = " + dl.distance + " link: " + dl.link));
+            neighborMap.get(i).forEach((id, dl) -> tempMap.put(id, dl));
         }
 
         // transmit table to the neighbors
@@ -137,21 +156,22 @@ public class DistanceVectorRouter extends Router {
         routeMap = tempMap; //makes it the new map (might need to be synchronized)
     }
 
-    public void fuckingpingpacket {
-        
-    }
-
-    /** Route the given packet out.
-    In our case, we go to all nodes except the originator
-    **/
-    private void route(int linkOriginator, Packet p) {
+    private void pingNeigbhors() {
         ArrayList<Integer> outLinks = nic.getOutgoingLinks();
         int size = outLinks.size();
         for (int i = 0; i < size; i++) {
-            if (outLinks.get(i) != linkOriginator) {
-                // Not the originator of this packet - so send it along!
-                nic.sendOnLink(i, p);
-            }
+            nic.sendOnLink(i, new Packet(nic.getNSAP(), outLinks.get(i), 0, null));
         }
+    }
+
+    /** Route the given packet out.
+     Sends the given packet out based on the table
+    **/
+    private void route(int link, Packet p) {
+//        System.out.println("LINK: " + link);
+        if (routeMap.get(link) != null) {
+            nic.sendOnLink(routeMap.get(link).link,p);
+        }
+
     }
 }
