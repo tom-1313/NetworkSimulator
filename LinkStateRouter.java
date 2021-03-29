@@ -8,6 +8,8 @@
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import FloodRouter.Packet;
+
 public class LinkStateRouter extends Router {
 	// A generator for the given LinkStateRouter class
 	public static class Generator extends Router.Generator {
@@ -27,9 +29,13 @@ public class LinkStateRouter extends Router {
 
 	public void run() {
 
-		nic.transmit(27, new Packet(nsap, 27, 20, "hi"));
+		
     	
         while (true) {
+        	for(int i : nic.getOutgoingLinks()) {
+        		nic.sendOnLink(i, new PingPacket(25, nic.getNSAP(), 5));
+        	}
+        	
         	
         	boolean process = false;
         	
@@ -50,7 +56,7 @@ public class LinkStateRouter extends Router {
             if (toRoute != null) {
                 // There is something to route through - or it might have arrived at destination
                 process = true;
-                if (toRoute.data instanceof Packet && !(toRoute.data instanceof PingPacket)) {
+                if (toRoute.data instanceof Packet) {
                     Packet p = (Packet) toRoute.data;
                     if (p.dest == nsap) {
                         // It made it!  Inform the "network" for statistics tracking purposes
@@ -64,8 +70,10 @@ public class LinkStateRouter extends Router {
                     } else {
                         debug.println(5, "Packet has too many hops.  Dropping packet from " + p.source + " to " + p.dest + " by router " + nsap);
                     }
-                    
-                }else if(toRoute.data instanceof PingPacket) {
+                } 
+
+                
+                if(toRoute.data instanceof PingPacket) {
                 	//We process our ping data
                 	PingPacket p = (PingPacket) toRoute.data;
                 	debug.println(1, "WE SENT A PING PACKET YAAAAAY");
@@ -101,14 +109,26 @@ public class LinkStateRouter extends Router {
             }
         }
 	}
-	private void route(int linkOriginator, Packet p) {
+	
+	//For some small amount of time, wait and then send a pingpacket to all neighbors
+	
+	private void floodPingPackets(PingPacket p) {
 		ArrayList<Integer> outLinks = nic.getOutgoingLinks();
 		int size = outLinks.size();
 		for (int i = 0; i < size; i++) {
-			if (outLinks.get(i) != linkOriginator) {
-				// Not the originator of this packet - so send it along!
-				nic.sendOnLink(i, p);
-			}
+			nic.sendOnLink(i, p);
 		}
 	}
+	
+	private void route(int linkOriginator, Packet p) {
+        ArrayList<Integer> outLinks = nic.getOutgoingLinks();
+        int size = outLinks.size();
+        for (int i = 0; i < size; i++) {
+            if (outLinks.get(i) != linkOriginator) {
+                // Not the originator of this packet - so send it along!
+                nic.sendOnLink(i, p);
+            }
+        }
+    }
+	
 }

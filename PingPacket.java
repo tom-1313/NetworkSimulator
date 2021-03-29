@@ -8,14 +8,6 @@ public class PingPacket extends Packet{
 		payload = null;
 		hopCount = 0;
 	}
-
-	public Pingpacket(int source, int dest, int ID)
-	{
-		ID = this.ID;
-		source = this.source;
-		dest = this.dest;
-
-	}
 	
 	public void recieved() {
 		received = true;
