@@ -155,7 +155,6 @@ public class DistanceVectorRouter extends Router {
 
         routeMap = tempMap; //makes it the new map (might need to be synchronized)
     }
-
     private void pingNeigbhors() {
         ArrayList<Integer> outLinks = nic.getOutgoingLinks();
         int size = outLinks.size();
