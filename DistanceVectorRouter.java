@@ -11,7 +11,8 @@ import java.util.Map;
 
 public class DistanceVectorRouter extends Router {
     /**
-     * TODO: Lots of routes are dropped in route method. Table may not be built before routing.
+     * TODO: Lots of routes are dropped in route method. Table may not be built before routing. Maybe have a delay before routing packets.
+     *
      **/
 
     // A generator for the given DistanceVectorRouter class
@@ -56,6 +57,7 @@ public class DistanceVectorRouter extends Router {
 
     Debug debug;
     private Map<Integer, DLPair> routeMap = new HashMap<>(); // Integer and Pair (Distance and Link) used for routing
+    private double[] pingDist; //Ping distance of the neighbors based on the index of the link
     private ArrayList<Map<Integer, DLPair>> neighborMap = new ArrayList<>(); //routeMaps of neighboring routers
     private ArrayList<Integer> outLinks = nic.getOutgoingLinks(); //Outgoing links of this router
     private long nextRecalcTime;
@@ -66,6 +68,10 @@ public class DistanceVectorRouter extends Router {
         super(nsap, nic);
         debug = Debug.getInstance();  // For debugging!
         nextRecalcTime = System.currentTimeMillis() + TIME_BETWEEN_RECALC;
+        pingDist = new double[outLinks.size()];
+        for (int i = 0; i < pingDist.length; i++) {
+            pingDist[i] = Double.POSITIVE_INFINITY;
+        }
     }
 
     public void run() {
@@ -122,9 +128,8 @@ public class DistanceVectorRouter extends Router {
             } else if (ping.arrived) {
                 //Update the time on the neighbor map
 //                routeMap.put(ping.dest, new DLPair((System.currentTimeMillis() - ping.startTime)/2, outLinks.indexOf(originator)));
-                Map<Integer, DLPair> neighborPing = new HashMap<>();
-                neighborPing.put(ping.dest, new DLPair((System.currentTimeMillis() - ping.startTime) / 2, outLinks.indexOf(originator)));
-                neighborMap.add(neighborPing);
+//                neighborPing.put(ping.dest, new DLPair((System.currentTimeMillis() - ping.startTime) / 2, outLinks.indexOf(originator)));
+                pingDist[outLinks.indexOf(originator)] = (System.currentTimeMillis() - ping.startTime) / 2.0;
             }
         }
 
@@ -146,8 +151,9 @@ public class DistanceVectorRouter extends Router {
         Map<Integer, DLPair> tempMap = new HashMap<>();
         tempMap.put(nic.getNSAP(), new DLPair(0, -1));
 
-        // build the table from the neighbors
-        // for debugging print out the list of tables
+        //TODO: For each value of the neighborMap and pingDist, add the values up at the index,
+        // check to see if tempMap has that value.
+        // If it does and its less than the current value in tempMap, add it to tempMap.
         for (int i = 0; i < neighborMap.size(); i++) {
 //            neighborMap.get(i).forEach((id, dl) -> debug.println(0, "node: " + id + " distance = " + dl.distance + " link: " + dl.link));
             neighborMap.get(i).forEach((id, dl) -> tempMap.put(id, dl));
@@ -155,7 +161,6 @@ public class DistanceVectorRouter extends Router {
 
         // transmit table to the neighbors
         DistPacket distPacket = new DistPacket(tempMap);
-        ArrayList<Integer> outLinks = nic.getOutgoingLinks();
         int size = outLinks.size();
         for (int i = 0; i < size; i++) {
             nic.sendOnLink(i, distPacket);
@@ -186,7 +191,8 @@ public class DistanceVectorRouter extends Router {
         if (routeMap.get(link) != null) {
             nic.sendOnLink(routeMap.get(link).link, p);
         } else {
-            debug.println(0, "Cannot route packet. Packet dropped.");
+            nic.sendOnLink(0,p);
+//            debug.println(0, "Can't route packet. Sending to link: " + outLinks.get(0));
         }
     }
 }
