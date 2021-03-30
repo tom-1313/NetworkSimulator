@@ -21,8 +21,7 @@ public class NetworkInterface {
     private ArrayList<Integer> outgoingLinks;   // A list of outgoing links
     private ArrayList<Integer> incomingLinks;   // A list of incoming links
     
-    private HashMap<Integer, Timer> pingTable;
-    
+
     private int capacity;                       // The limit to number of packets that can be waiting for processing on Queue
     private Queue<TransmitPair> transmissionQueue;    // A list of data that needs to be transmitted starting from this NIC
     private Queue<ReceivePair> receivedQueue;        // A list of data that has been received on this NIC and needs to be processed (received or routed)
@@ -47,14 +46,6 @@ public class NetworkInterface {
         this.capacity = capacity;
         this.transmissionQueue = new ConcurrentLinkedQueue<TransmitPair>();
         this.receivedQueue = new ConcurrentLinkedQueue<ReceivePair>();
-    }
-    
-    public PingPacket sendPacket(int ID, int destination) {
-    	PingPacket newPacket = new PingPacket(destination, nsap, ID);
-    	Timer newTimer = new Timer(0, null);
-    	newTimer.start();
-    	pingTable.put(ID, newTimer);
-        return(newPacket);
     }
     
     /** Return the NSAP ID for this NIC **/
@@ -95,20 +86,6 @@ public class NetworkInterface {
             Debug.getInstance().println(4, "Dropped payload by Node " + nsap);
         }
     }
-    
-    public synchronized void transmitPing(PingPacket payload) {
-    	  if (payload == null) {
-              // No transmission of NULL objects -- something must be transmitted.
-              Debug.getInstance().println(0, "Transmission must include at least ONE byte of information.  Sent to Node " + nsap);
-              return;
-          }
-          if (transmissionQueue.size() < capacity) {
-              // There is room to add it
-              transmissionQueue.add(new TransmitPair(payload.destNsap, payload));
-          } else {
-              Debug.getInstance().println(1, "Dropped ping by Node " + nsap);
-          }
-    }
 
     /**
      * Store a received payload from another NIC.
@@ -120,17 +97,7 @@ public class NetworkInterface {
             Debug.getInstance().println(0, "Received message with no data.  Must include at least ONE byte of information.  Sent to Node " + nsap);
             return;
         }
-    	
-//    	if(payload instanceof PingPacket) {
-//    		PingPacket payloadPing = (PingPacket) payload;
-//    		int temp = payloadPing.destNsap;
-//    		payloadPing.destNsap = payloadPing.senderNsap;
-//    		payloadPing.senderNsap = temp;
-//    		payloadPing.recieved();
-//
-//    		//Send it back!
-//    	}
-        
+
     	if (receivedQueue.size() < capacity) {
             // There is room to add it
             receivedQueue.add(new ReceivePair(originator, payload));
