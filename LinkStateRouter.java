@@ -8,6 +8,7 @@
 import java.util.ArrayList;
 import java.util.HashMap;
 
+//Each router has a graph that it generates via pinging its neighbors. 
 
 public class LinkStateRouter extends Router {
 	// A generator for the given LinkStateRouter class
@@ -33,6 +34,7 @@ public class LinkStateRouter extends Router {
 		while (true) {
 
 			//if()
+			
 			floodPingPackets(new PingPacket(nsap, System.currentTimeMillis()));
 
 
