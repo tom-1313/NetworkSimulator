@@ -21,10 +21,14 @@ public class LinkStateRouter extends Router {
 	Debug debug;
 	public HashMap<Integer, Double> table;
 	public static final int delay = 1000;
+	public Graph graph;
+	public Node router;
 	public LinkStateRouter(int nsap, NetworkInterface nic) {
 		super(nsap, nic);
 		debug = Debug.getInstance(); // For debugging!
 		table = new HashMap<Integer, Double>();
+		graph = new Graph();
+		router = new Node(String.valueOf(nsap));
 	}
 
 	public void run() {
@@ -33,12 +37,15 @@ public class LinkStateRouter extends Router {
 		long nextPingTime = System.currentTimeMillis() + delay;
 		while (true) {
 			
-			//Send a ping every delay
+			//Send a ping every delay, and update our graph
 			if(nextPingTime <= System.currentTimeMillis()) {
 				for(int randNSAP : nic.getOutgoingLinks()) {
 					floodPingPackets(new PingPacket(nsap, randNSAP, System.currentTimeMillis()));
 				}
 				nextPingTime = System.currentTimeMillis() + delay;
+				
+				graph.calculateShortestPathFromSource(graph, router);
+				debug.println(1, graph.toString());
 			}
 
 			boolean process = false;
@@ -67,21 +74,27 @@ public class LinkStateRouter extends Router {
 					//debug.println(1, "WE received A PING PACKET YAAAAAY");
 					//If our packet has been recieved, and the destination is the original sender
 					//debug.println(1, p.dest + " " + nsap);
-					if(p.isRecieved()) {
+					if(p.isRecieved() && p.dest == nsap) {
+						
 						double timeTaken = (double)(System.currentTimeMillis() - p.getStartTime());
-						debug.println(1, "(LinkStateRouter.run): PingPacket has arrived!  Reporting to the NIC - for accounting purposes!" + 
+						debug.println(4, "(LinkStateRouter.run): PingPacket has arrived!  Reporting to the NIC - for accounting purposes!" + 
 						" IP Address: " + nic.getNSAP() + "link from which it was sent is: " + toRoute.originator + " time taken: " + timeTaken);
 						
 						//nic.sendOnLink(nic.getOutgoingLinks().indexOf(toRoute.originator), p);//This finds the link that 
 						table.put(toRoute.originator, timeTaken);
+						
+						Node newNode = new Node(String.valueOf(p.source));
+						router.addDestination(newNode, timeTaken);
+						graph.addNode(newNode);
 
 					}else if(p.dest == nsap){
 						p.recieved();
 						//PingPacket returnPacket = new PingPacket(nsap, p.source, 20);
-						
+						int temp = p.dest;
 						p.dest = p.source;
+						p.source = p.dest;
 						//Need to identify the link to send it back out on.
-						debug.println(1, "Returning to sender:" + nic.getOutgoingLinks().indexOf(toRoute.originator));
+						debug.println(4, "Returning to sender:" + nic.getOutgoingLinks().indexOf(toRoute.originator));
 						
 						
 						nic.sendOnLink(nic.getOutgoingLinks().indexOf(toRoute.originator), p);
