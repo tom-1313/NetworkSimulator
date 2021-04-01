@@ -56,8 +56,8 @@ public class DistanceVectorRouter extends Router {
     }
 
     Debug debug;
-    private Map<Integer, DLPair> routeMap = new HashMap<>(); // Integer and Pair (Distance and Link) used for routing
-    private double[] pingDist; //Ping distance of the neighbors based on the index of the link
+    private Map<Integer, DLPair> routeTable = new HashMap<>(); // Integer and Pair (Distance and Link) used for routing
+    public double[] pingDist; //Ping distance of the neighbors based on the index of the link
     private ArrayList<Map<Integer, DLPair>> neighborMap = new ArrayList<>(); //routeMaps of neighboring routers
     private ArrayList<Integer> outLinks = nic.getOutgoingLinks(); //Outgoing links of this router
     private long nextRecalcTime;
@@ -148,31 +148,63 @@ public class DistanceVectorRouter extends Router {
     //Recalculates the routeMap using the neighboring routeMaps stored in neighborMap
     private void recalculate() {
         nextRecalcTime = System.currentTimeMillis() + TIME_BETWEEN_RECALC;
-        Map<Integer, DLPair> tempMap = new HashMap<>();
-        tempMap.put(nic.getNSAP(), new DLPair(0, -1));
+        Map<Integer, DLPair> tempTable = new HashMap<>();
+        tempTable.put(nic.getNSAP(), new DLPair(0, -1));
+
+        //add the pingDist table to the temp map.
+        for (int i = 0; i < pingDist.length; i++) {
+            tempTable.put(outLinks.get(i), new DLPair(pingDist[i], i));
+        }
 
         //TODO: For each value of the neighborMap and pingDist, add the values up at the index,
-        // check to see if tempMap has that value.
-        // If it does and its less than the current value in tempMap, add it to tempMap.
+        // check to see if tempTable has that value.
+        // If it does and its less than the current value in tempTable, add it to tempTable.
+//        System.out.println("neighborMap.size = " + neighborMap.size());
+        //If dl.link = -1 then add the distance from the pingDist and get the link
         for (int i = 0; i < neighborMap.size(); i++) {
-//            neighborMap.get(i).forEach((id, dl) -> debug.println(0, "node: " + id + " distance = " + dl.distance + " link: " + dl.link));
-            neighborMap.get(i).forEach((id, dl) -> tempMap.put(id, dl));
+            neighborMap.get(i).forEach((id, dl) -> debug.println(0, "node: " + id + " distance = " + dl.distance + " link: " + dl.link));
+            neighborMap.get(i).forEach((id, dl) -> {
+                double dist;
+
+
+                if (dl.link == -1) {
+                    dist = pingDist[dl.link];
+                } else {
+                    dist = dl.distance + pingDist[dl.link];
+                }
+                if (routeTable.get(id) == null || dist < routeTable.get(id).distance) {
+                    System.out.println("Adding to tempTable");
+                    tempTable.put(id, new DLPair(dist, dl.link));
+                }
+            });
         }
 
         // transmit table to the neighbors
-        DistPacket distPacket = new DistPacket(tempMap);
+        DistPacket distPacket = new DistPacket(tempTable);
         int size = outLinks.size();
         for (int i = 0; i < size; i++) {
             nic.sendOnLink(i, distPacket);
         }
 
         if (nic.getNSAP() == 10) {
-//            tempMap.forEach((id, dl) -> debug.println(0, "node: " + id + " distance = " + dl.distance + " link: " + dl.link));
+            tempTable.forEach((id, dl) -> debug.println(0, "node: " + id + " distance = " + dl.distance + " link: " + dl.link));
 //            System.out.println("Finished printing temp");
         }
 
-        routeMap = tempMap; //makes it the new map (might need to be synchronized)
+        routeTable = tempTable; //makes it the new map (might need to be synchronized)
     }
+
+//    public boolean checkTable(int id, DLPair dl) {
+//        if (outLinks.indexOf(id) != -1) {
+//            if (pingDist[outLinks.indexOf(id)] + dl.distance < routeTable.get(id).distance) {
+//                System.out.println("this is true");
+//                return true; //add it to the table
+//            }
+//            System.out.println("this is false");
+//        }
+//        System.out.println("outlinks id: " + outLinks.indexOf(id));
+//        return false; //do not add it to the table
+//    }
 
     private void pingNeigbhors() {
         ArrayList<Integer> outLinks = nic.getOutgoingLinks();
@@ -188,8 +220,8 @@ public class DistanceVectorRouter extends Router {
      **/
     private void route(int link, Packet p) {
 //        debug.println(0, "Attempting to send to " + link + " via the routMap of " + routeMap.get(link).link);
-        if (routeMap.get(link) != null) {
-            nic.sendOnLink(routeMap.get(link).link, p);
+        if (routeTable.get(link) != null) {
+            nic.sendOnLink(routeTable.get(link).link, p);
         } else {
             nic.sendOnLink(0,p);
 //            debug.println(0, "Can't route packet. Sending to link: " + outLinks.get(0));
