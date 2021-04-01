@@ -20,7 +20,7 @@ public class LinkStateRouter extends Router {
 
 	Debug debug;
 	public HashMap<Integer, Double> table;
-	public int delay;
+	public static final int delay = 1000;
 	public LinkStateRouter(int nsap, NetworkInterface nic) {
 		super(nsap, nic);
 		debug = Debug.getInstance(); // For debugging!
@@ -32,11 +32,14 @@ public class LinkStateRouter extends Router {
 
 		long nextPingTime = System.currentTimeMillis() + delay;
 		while (true) {
-
-			//if()
 			
-			floodPingPackets(new PingPacket(nsap, System.currentTimeMillis()));
-
+			//Send a ping every delay
+			if(nextPingTime <= System.currentTimeMillis()) {
+				for(int randNSAP : nic.getOutgoingLinks()) {
+					floodPingPackets(new PingPacket(nsap, randNSAP, System.currentTimeMillis()));
+				}
+				nextPingTime = System.currentTimeMillis() + delay;
+			}
 
 			boolean process = false;
 
@@ -61,28 +64,32 @@ public class LinkStateRouter extends Router {
 				if(toRoute.data instanceof PingPacket) {
 					//We process our ping data
 					PingPacket p = (PingPacket) toRoute.data;
-					debug.println(1, "WE received A PING PACKET YAAAAAY");
+					//debug.println(1, "WE received A PING PACKET YAAAAAY");
 					//If our packet has been recieved, and the destination is the original sender
+					//debug.println(1, p.dest + " " + nsap);
 					if(p.isRecieved()) {
-						debug.println(4, "(LinkStateRouter.run): PingPacket has arrived!  Reporting to the NIC - for accounting purposes!" + 
-						" IP Address: " + nic.getNSAP() + "link from which it was sent is: " + toRoute.originator);
-
+						double timeTaken = (double)(System.currentTimeMillis() - p.getStartTime());
+						debug.println(1, "(LinkStateRouter.run): PingPacket has arrived!  Reporting to the NIC - for accounting purposes!" + 
+						" IP Address: " + nic.getNSAP() + "link from which it was sent is: " + toRoute.originator + " time taken: " + timeTaken);
+						
 						//nic.sendOnLink(nic.getOutgoingLinks().indexOf(toRoute.originator), p);//This finds the link that 
-						table.put(toRoute.originator);
+						table.put(toRoute.originator, timeTaken);
 
-					}else{
+					}else if(p.dest == nsap){
 						p.recieved();
 						//PingPacket returnPacket = new PingPacket(nsap, p.source, 20);
 						
+						p.dest = p.source;
 						//Need to identify the link to send it back out on.
-						debug.println(1, "Returning to sender:" + p.source);
-
-						//nic.sendOnLink(p., p)
+						debug.println(1, "Returning to sender:" + nic.getOutgoingLinks().indexOf(toRoute.originator));
+						
+						
+						nic.sendOnLink(nic.getOutgoingLinks().indexOf(toRoute.originator), p);
 
 						//Need to identify the link index and which of those links will have the ip address, in link 65
 
 
-						nic.sendOnLink(nic.getOutgoingLinks().indexOf(toRoute.originator), p);
+						//nic.sendOnLink(nic.getOutgoingLinks().indexOf(toRoute.originator), p);
 						
 						//route()
 

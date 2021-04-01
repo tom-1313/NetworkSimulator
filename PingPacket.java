@@ -3,11 +3,10 @@ public class PingPacket extends Packet{
 	private boolean received;
 	private long timeInMillis;
 	
-	public PingPacket(int source, long timeInMillis) {
-		super(source, -1, 99999, null);
+	public PingPacket(int source, int destination, long timeInMillis) {
+		super(source, destination, 1, null);
 		// TODO Auto-generated constructor stub
 		payload = null;
-		hopCount = 99999;
 		this.timeInMillis = timeInMillis;
 	}
 	
