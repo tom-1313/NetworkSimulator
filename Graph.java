@@ -13,7 +13,17 @@ public class Graph {
 	private Set<Node> nodes = new HashSet<>();
 	private Node source;
     public void addNode(Node nodeA) {
-        nodes.add(nodeA);
+       for(Node node : nodes) {
+    	   
+    	   if(node.getName().equals(nodeA.getName())){
+    		  nodes.remove(node);
+    		  nodes.add(nodeA);
+    		  return;
+    	   }
+       }
+       nodes.add(nodeA);	
+        
+    	
     }
     
     public Graph calculateShortestPathFromSource(Graph graph, Node source) {
@@ -67,7 +77,7 @@ public class Graph {
     
     @Override
     public String toString() {
-    	String graphToString = "Distance and path from " + source.getName() + ": ";
+    	String graphToString = "Distance and path from " + source.getName() + ":\n";
     	for(Node currNode : nodes) {
     		graphToString += currNode.getName() + ": " + currNode.getDistance() + ", path = { ";
     		
@@ -81,6 +91,14 @@ public class Graph {
     		//break;
     	}
     	return graphToString;
+    }
+    
+    public Node getSourceNode() {
+    	return source;
+    }
+    
+    public Set<Node> getPathList(){
+    	return nodes;
     }
     
 

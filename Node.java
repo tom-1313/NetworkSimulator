@@ -13,8 +13,12 @@ public class Node {
 	    Map<Node, Double> adjacentNodes = new HashMap<>();
 
 	    public void addDestination(Node destination, double distance) {
-	        
-	    	adjacentNodes.put(destination, distance);
+	        if(!adjacentNodes.containsKey(destination)) {
+	        	adjacentNodes.put(destination, distance);
+	        }else {
+	        	adjacentNodes.replace(destination, distance);
+	        }
+	    	
 	    }
 	 
 	    public Node(String name) {
