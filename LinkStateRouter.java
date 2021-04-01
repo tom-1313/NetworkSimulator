@@ -61,11 +61,14 @@ public class LinkStateRouter extends Router {
 					PingPacket p = (PingPacket) toRoute.data;
 					debug.println(1, "WE received A PING PACKET YAAAAAY");
 					//If our packet has been recieved, and the destination is the original sender
-					if(p.dest == nsap && p.isRecieved()) {
+					if(p.isRecieved()) {
 						debug.println(4, "(LinkStateRouter.run): PingPacket has arrived!  Reporting to the NIC - for accounting purposes!" + 
 						" IP Address: " + nic.getNSAP() + "link from which it was sent is: " + toRoute.originator);
 
-					}else if(p.source != nsap && !p.isRecieved()){
+						//nic.sendOnLink(nic.getOutgoingLinks().indexOf(toRoute.originator), p);//This finds the link that 
+						table.put(toRoute.originator);
+
+					}else{
 						p.recieved();
 						//PingPacket returnPacket = new PingPacket(nsap, p.source, 20);
 						
@@ -77,7 +80,7 @@ public class LinkStateRouter extends Router {
 						//Need to identify the link index and which of those links will have the ip address, in link 65
 
 
-						nic.sendOnLink(toRoute.originator, p);
+						nic.sendOnLink(nic.getOutgoingLinks().indexOf(toRoute.originator), p);
 						
 						//route()
 
@@ -87,8 +90,6 @@ public class LinkStateRouter extends Router {
 						//Then we check the time and store the value in a hashmap
 						//If we didn't send it, then we 
 
-					}else {
-						//debug.println(0, "Error.  The packet being tranmitted is not a recognized Packet.  Not processing");
 					}
 
 				}else if (toRoute.data instanceof Packet) {
