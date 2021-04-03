@@ -7,6 +7,10 @@
  ***************/
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 //Each router has a graph that it generates via pinging its neighbors. 
 
@@ -44,13 +48,12 @@ public class LinkStateRouter extends Router {
 
 					// create our initial graphs, then flood graph packets of the nodes that contain
 					// our graphs
-					graph.calculateShortestPathFromSource(graph, router);
+					//graph.calculateShortestPathFromSource(graph, router);
 					floodGraphPackets(new GraphPacket(nsap, randNSAP, System.currentTimeMillis(), graph));
 				}
 				nextPingTime = System.currentTimeMillis() + delay;
 
-				graph.calculateShortestPathFromSource(graph, router);
-				debug.println(1, graph.toString());
+				
 			}
 
 			boolean process = false;
@@ -79,13 +82,8 @@ public class LinkStateRouter extends Router {
 					GraphPacket p = (GraphPacket) toRoute.data;
 					double timeTakenToTraverse = System.currentTimeMillis() - p.getStartTime();
 					router.addDestination(p.graph.getSourceNode(), timeTakenToTraverse);
-					graph.addNode(p.graph.getSourceNode());
-					for (Node newNode : p.graph.getPathList()) {
-						if(!newNode.getName().equals(String.valueOf(nsap)) && newNode.getDistance() != 0.0);{
-							graph.addNode(newNode);
-						}
-						
-					}
+					concatonateGraphNodes(p);
+					
 
 				}else if (toRoute.data instanceof PingPacket) {
 					// We process our ping data
@@ -163,7 +161,46 @@ public class LinkStateRouter extends Router {
 			}
 		}
 	}
+	private synchronized void concatonateGraphNodes(GraphPacket p) {
+		
+		graph.getSourceNode().addDestination(p.graph.getSourceNode(), System.currentTimeMillis() - p.getStartTime());
+		graph.addNode(p.graph.getSourceNode());
+		/*
+		for (Node newNode : p.graph.getPathList()) {
+			
+			if(!newNode.getName().equals(String.valueOf(nsap)));{
+				
+					graph.addNode(newNode);
+				
+			}
+			
+		
+		}
+		*/
+	
+		Iterator it = p.graph.getPathList().iterator();
+		while (it.hasNext()) {
+	        
+	        //System.out.println(pair.getKey() + " = " + pair.getValue());
+			try {
+				Node newNode = (Node)it.next();
+				graph.addNode(newNode);
+			}catch(Exception e) {
+				
+				graph.addNode(newNode);
+			}
+			
+	        
+	        
+	    }
+		
+		graph.calculateShortestPathFromSource(graph, router);
+		debug.println(1, graph.toString());
+	    
+		
 
+	}
+	
 	// For some small amount of time, wait and then send a pingpacket to all
 	// neighbors
 
