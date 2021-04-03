@@ -155,16 +155,14 @@ public class DistanceVectorRouter extends Router {
         if (nic.getNSAP() == 10) {
             System.out.println("OUTLINKS SIZE: " + outLinks.size() + " NEIGHBORMAP SIZE: " + neighborMap.size() + " pingDist length: " + pingDist.length);
         }
-        for (int i = 0; i < neighborMap.size()-1; i++) {
-//            neighborMap.get(i).forEach((id, dl) -> debug.println(0, "node: " + id + " distance = " + dl.distance + " link: " + dl.link));
-
-            int currentIndex = i;
-
+        for (int i = 0; i < neighborMap.size(); i++) {
+            final int CURRENT_LINK = i;
+            neighborMap.get(i).forEach((id, dl) -> debug.println(0, "node: " + id + " distance = " + dl.distance + " link: " + dl.link));
             //Getting an array index out of bounds here for the current index.
             neighborMap.get(i).forEach((id, dl) -> {
-                double dist = dl.distance + pingDist[currentIndex];
+                double dist = dl.distance + pingDist[CURRENT_LINK];
                 if (routeTable.get(id) == null || dist < routeTable.get(id).distance) {
-                    tempTable.put(id, new DLPair(dist, currentIndex));
+                    tempTable.put(id, new DLPair(dist, CURRENT_LINK));
                 }
             });
         }
