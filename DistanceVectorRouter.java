@@ -89,7 +89,7 @@ public class DistanceVectorRouter extends Router {
                 // There is something to send out
                 process = true;
 //                debug.println(0, "(DistanceVectorRouter.run): I am being asked to transmit: " + toSend.data + " to the destination: " + toSend.destination);
-                route(toSend.destination, new Packet(nsap, toSend.destination, 0, toSend.data));
+                route(toSend.destination, new Packet(nsap, toSend.destination, 5, toSend.data));
 
             }
 
@@ -133,13 +133,16 @@ public class DistanceVectorRouter extends Router {
         }
 
         //If it is a packet and it reached it's destination then the packet is tracked,
-        //If not it is routed again
+        //If not it is routed again and its hop count is decreased
         if (data instanceof Packet) {
             Packet packet = (Packet) data;
             if (packet.dest == nsap) {
                 nic.trackArrivals(packet.payload);
-            } else {
+            } else if (packet.hopCount > 0) {
+//                packet.hopCount--;
                 route(packet.dest, packet);
+            } else {
+                debug.println(0, "Packet has too many hops.  Dropping packet from " + packet.source + " to " + packet.dest + " by router " + nsap);
             }
         }
     }
@@ -157,7 +160,6 @@ public class DistanceVectorRouter extends Router {
 
         for (int i = 0; i < neighborMap.size(); i++) {
             final int CURRENT_LINK = i;
-            neighborMap.get(i).forEach((id, dl) -> debug.println(0, "node: " + id + " distance = " + dl.distance + " link: " + dl.link));
             neighborMap.get(i).forEach((id, dl) -> {
                 double dist = dl.distance + pingDist[CURRENT_LINK];
                 if (routeTable.get(id) == null || dist < routeTable.get(id).distance) {
@@ -186,15 +188,13 @@ public class DistanceVectorRouter extends Router {
 
     /**
      * Route the given packet out.
-     * Sends the given packet out based on the table
+     * Sends the given packet out based on the table if the destination is not on the table it routes it to the first router
      **/
     private void route(int link, Packet p) {
-//        debug.println(0, "Attempting to send to " + link + " via the routMap of " + routeMap.get(link).link);
         if (routeTable.get(link) != null) {
             nic.sendOnLink(routeTable.get(link).link, p);
         } else {
-            nic.sendOnLink(0,p);
-//            debug.println(0, "Can't route packet. Sending to link: " + outLinks.get(0));
+            nic.sendOnLink(0, p);
         }
     }
 }
