@@ -155,22 +155,13 @@ public class DistanceVectorRouter extends Router {
             tempTable.put(outLinks.get(i), new DLPair(pingDist[i], i));
         }
 
-        //TODO: For each value of the neighborMap and pingDist, add the values up at the index,
-        // check to see if tempTable has that value.
-        // If it does and its less than the current value in tempTable, add it to tempTable.
-        if (nic.getNSAP() == 10) {
-            System.out.println("OUTLINKS SIZE: " + outLinks.size() + " NEIGHBORMAP SIZE: " + neighborMap.size() + " pingDist length: " + pingDist.length);
-        }
-        for (int i = 0; i < neighborMap.size()-1; i++) {
-//            neighborMap.get(i).forEach((id, dl) -> debug.println(0, "node: " + id + " distance = " + dl.distance + " link: " + dl.link));
-
-            int currentIndex = i;
-
-            //Getting an array index out of bounds here for the current index.
+        for (int i = 0; i < neighborMap.size(); i++) {
+            final int CURRENT_LINK = i;
+            neighborMap.get(i).forEach((id, dl) -> debug.println(0, "node: " + id + " distance = " + dl.distance + " link: " + dl.link));
             neighborMap.get(i).forEach((id, dl) -> {
-                double dist = dl.distance + pingDist[currentIndex];
+                double dist = dl.distance + pingDist[CURRENT_LINK];
                 if (routeTable.get(id) == null || dist < routeTable.get(id).distance) {
-                    tempTable.put(id, new DLPair(dist, currentIndex));
+                    tempTable.put(id, new DLPair(dist, CURRENT_LINK));
                 }
             });
         }
@@ -180,11 +171,6 @@ public class DistanceVectorRouter extends Router {
         int size = outLinks.size();
         for (int i = 0; i < size; i++) {
             nic.sendOnLink(i, distPacket);
-        }
-
-        if (nic.getNSAP() == 10) {
-//            tempTable.forEach((id, dl) -> debug.println(0, "node: " + id + " distance = " + dl.distance + " link: " + dl.link));
-//            System.out.println("Finished printing temp");
         }
 
         routeTable = tempTable; //makes it the new map (might need to be synchronized)
