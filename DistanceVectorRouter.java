@@ -65,8 +65,14 @@ public class DistanceVectorRouter extends Router {
         debug = Debug.getInstance();  // For debugging!
         nextRecalcTime = System.currentTimeMillis() + TIME_BETWEEN_RECALC;
         pingDist = new double[outLinks.size()];
+
+        //Initialize the pingDist to Infinity and add the values to the neighborMap
         for (int i = 0; i < pingDist.length; i++) {
             pingDist[i] = Double.POSITIVE_INFINITY;
+
+            Map<Integer, DLPair> initTable = new HashMap<>();
+            initTable.put(outLinks.get(i), new DLPair(pingDist[i], i));
+            neighborMap.add(initTable);
         }
     }
 
@@ -108,10 +114,10 @@ public class DistanceVectorRouter extends Router {
     //Process the packets recieved from the network
     private void processPacket(int originator, Object data) {
 
-        //If its another router's table, add it to the neighbor table map
+        //Update the table in the neighborMap with the new incoming table
         if (data instanceof DistPacket) {
             DistPacket p = (DistPacket) data;
-            neighborMap.add(p.distTable);
+            neighborMap.set(outLinks.indexOf(originator), p.distTable);
         }
 
         //If the data is a ping then it is send back to originator,
@@ -181,7 +187,6 @@ public class DistanceVectorRouter extends Router {
 //            System.out.println("Finished printing temp");
         }
 
-        neighborMap.clear();
         routeTable = tempTable; //makes it the new map (might need to be synchronized)
     }
 
