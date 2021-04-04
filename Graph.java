@@ -1,6 +1,7 @@
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -10,10 +11,21 @@ import java.util.Set;
 public class Graph {
 	
 	
-	private Set<Node> nodes = new HashSet<>();
+	private HashSet<Node> nodes = new HashSet<>();
 	private Node source;
     public void addNode(Node nodeA) {
-       for(Node node : nodes) {
+       
+    	Iterator it = nodes.iterator();
+    	while (it.hasNext()) {	        
+			Node node = (Node)it.next();
+			if(node.getName().equals(nodeA.getName())){
+	    		  nodes.remove(node);
+	    		  nodes.add(nodeA);
+	    		  return;
+	    	}
+    	}
+    	/*
+    	for(Node node : nodes) {
     	   
     	   if(node.getName().equals(nodeA.getName())){
     		  nodes.remove(node);
@@ -21,6 +33,7 @@ public class Graph {
     		  return;
     	   }
        }
+    	*/
        nodes.add(nodeA);	
         
     	
@@ -51,9 +64,40 @@ public class Graph {
         return graph;
     }
     
+    //We are guarenteed that the source of graph1 is going to be connected to the source of graph2 with a certified distance
+    //We must return a combination of these two graphs put together, with the correct distances for each.
+    public Graph combineGraphs(Graph graph1, Graph graph2, double distance) {
+    	Node source1 = graph1.getSourceNode();
+    	Node source2 = graph2.getSourceNode();
+    	
+    	source1.addDestination(source2, distance);
+    	Graph combinationalGraph = new Graph();
+    	
+    	
+    	Iterator it = graph1.getPathList().iterator();
+    	while (it.hasNext()) {	        
+			Node node = (Node)it.next();
+			combinationalGraph.addNode(node);
+    	}
+    	
+    	Iterator it2 = graph2.getPathList().iterator();
+    	while (it.hasNext()) {	        
+			Node node = (Node)it.next();
+			combinationalGraph.addNode(node);
+    	}
+    	
+    	
+    	combinationalGraph.addNode(source1);
+    	combinationalGraph.addNode(source2);
+    	
+    	return combinationalGraph;
+    	
+    	
+    }
+    
     private static Node getLowestDistanceNode(Set < Node > unsettledNodes) {
         Node lowestDistanceNode = null;
-        double lowestDistance = Float.MAX_VALUE;
+        double lowestDistance = Double.MAX_VALUE;
         for (Node node: unsettledNodes) {
             double nodeDistance = node.getDistance();
             if (nodeDistance < lowestDistance) {
@@ -92,6 +136,9 @@ public class Graph {
     	}
     	return graphToString;
     }
+    //public Node getNodeDest(String from, String to) {
+    	//if(nodes)
+   // }
     
     public Node getSourceNode() {
     	return source;
