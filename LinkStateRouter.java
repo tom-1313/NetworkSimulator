@@ -93,7 +93,7 @@ public class LinkStateRouter extends Router {
 					// debug.println(1, p.dest + " " + nsap);
 					if (p.isRecieved() && p.dest == nsap) {
 
-						double timeTaken = (double) (System.currentTimeMillis() - p.getStartTime());
+						double timeTaken = (double) (System.currentTimeMillis() - p.getStartTime()); // Need to divide by two here
 						debug.println(4,
 								"(LinkStateRouter.run): PingPacket has arrived!  Reporting to the NIC - for accounting purposes!"
 										+ " IP Address: " + nic.getNSAP() + "link from which it was sent is: "
