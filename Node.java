@@ -12,12 +12,27 @@ public class Node {
 	    
 	    Map<Node, Double> adjacentNodes = new HashMap<>();
 
-	    public void addDestination(Node destination, double distance) {
-	        if(!adjacentNodes.containsKey(destination)) {
+	    public void addDestination(Node newNode, double distance) {
+	    	if(!adjacentNodes.isEmpty()) {
+	    		for (Map.Entry<Node,Double> entry : adjacentNodes.entrySet()) {
+	    			if(newNode.getName().equals(entry.getKey().getName())) {
+	    				adjacentNodes.remove(entry.getKey());
+	    				break;
+	    				
+	    			}
+	    		}
+	    	}
+	    	adjacentNodes.put(newNode, distance);
+	    	
+	    	
+	    	/*
+	    	
+	    	if(!adjacentNodes.containsKey(destination)) {
 	        	adjacentNodes.put(destination, distance);
 	        }else {
 	        	adjacentNodes.replace(destination, distance);
 	        }
+	        */
 	    	
 	    }
 	 
@@ -51,10 +66,10 @@ public class Node {
 	    }
 
 	    public String output() {
-	    	returnStr = "";
+	    	returnStr = " ";
 	    	adjacentNodes.forEach((node, distance) ->{
 	    		
-	    		returnStr += node.getName() + " ";
+	    		returnStr += "Nodes: " + node.getName() + " ";
 	    	});
 	    	
 	    	return returnStr;

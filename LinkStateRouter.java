@@ -101,14 +101,14 @@ public class LinkStateRouter extends Router {
 					
 					//add each of the connections from this node to 
 					map.forEach((routerInt, distance) -> {
-						Node tableNode = new Node(routerInt);
+						Node tableNode = graph.addNode(new Node(routerInt));
 						debug.println(1, "" + routerInt);
 						headerNode.addDestination(tableNode, distance);
 						//tableNode.addDestination(headerNode, distance);
 						
-						graph.addNode(tableNode);
+						//graph.addNode(tableNode);
 					});
-					graph.addNode(headerNode);
+					//graph.addNode(headerNode);
 				});
 				
 				graph.addNode(router);
