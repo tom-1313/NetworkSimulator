@@ -74,5 +74,18 @@ public class Node {
 	    	
 	    	return returnStr;
 	    }
+
+		public String getAdjacentNodeFromName(String name) {
+			// TODO Auto-generated method stub
+			returnStr = "";
+			adjacentNodes.forEach((node, distance) ->{
+	    		if(node.getName().equals(name)) {
+	    			returnStr = name;
+	    		}
+	    		
+	    	});
+	    	
+			return returnStr;
+		}
 	    
 }

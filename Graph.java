@@ -20,7 +20,8 @@ public class Graph {
     	while (it.hasNext()) {	        
 			Node node = (Node)it.next();
 			if(node.getName().equals(nodeA.getName())){
-	    		  return node;
+	    		//System.out.println("REturning!");  
+				return node;
 	    	}
     	}
     	nodes.add(nodeA);
@@ -145,7 +146,12 @@ public class Graph {
     			List<Node> destinationNodeList = currNode.getShortestPath();
     			//return the top
     			if(!destinationNodeList.isEmpty()) {
-    				return Integer.parseInt(destinationNodeList.get(0).getName());
+    				//return Integer.parseInt(destinationNodeList.get(0).getName());
+    				try {
+    					return Integer.parseInt(destinationNodeList.get(1).getName());
+    				}catch(Exception e){
+    					return -1;
+    				}
     			}else {
     				return -1;
     			}
