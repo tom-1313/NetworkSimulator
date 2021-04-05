@@ -88,7 +88,7 @@ public class LinkStateRouter extends Router {
 				linkTable.forEach((routerInt, distance) -> {
 					Node tableNode = new Node(routerInt);
 					router.addDestination(tableNode, distance);
-					tableNode.addDestination(router, distance);
+					//tableNode.addDestination(router, distance);
 					
 					//System.out.println(distance);
 					graph.addNode(tableNode);
@@ -102,17 +102,20 @@ public class LinkStateRouter extends Router {
 					//add each of the connections from this node to 
 					map.forEach((routerInt, distance) -> {
 						Node tableNode = new Node(routerInt);
+						debug.println(1, "" + routerInt);
 						headerNode.addDestination(tableNode, distance);
-						tableNode.addDestination(headerNode, distance);
+						//tableNode.addDestination(headerNode, distance);
 						
 						graph.addNode(tableNode);
 					});
+					graph.addNode(headerNode);
 				});
 				
 				graph.addNode(router);
 				//Actually calculate our graph
 				graph.calculateShortestPathFromSource(graph, router);
 				debug.println(1, graph.toString());
+				debug.println(2, router.output());
 				nextPingTime = System.currentTimeMillis() + delay;
 				flip = 0;
 			}

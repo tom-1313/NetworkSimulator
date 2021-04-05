@@ -5,7 +5,7 @@ import java.util.Map;
 
 public class Node {
 	    private String name;
-	    
+	    private String returnStr;
 	    private List<Node> shortestPath = new LinkedList<>();
 	    
 	    private double distance = Float.MAX_VALUE;
@@ -48,6 +48,16 @@ public class Node {
 	    }
 	    public String getName() {
 	    	return name;
+	    }
+
+	    public String output() {
+	    	returnStr = "";
+	    	adjacentNodes.forEach((node, distance) ->{
+	    		
+	    		returnStr += node.getName() + " ";
+	    	});
+	    	
+	    	return returnStr;
 	    }
 	    
 }
