@@ -13,17 +13,18 @@ public class Graph {
 	
 	private HashSet<Node> nodes = new HashSet<>();
 	private Node source;
-    public void addNode(Node nodeA) {
+   
+	public Node addNode(Node nodeA) {
        
     	Iterator it = nodes.iterator();
     	while (it.hasNext()) {	        
 			Node node = (Node)it.next();
 			if(node.getName().equals(nodeA.getName())){
-	    		  nodes.remove(node);
-	    		  nodes.add(nodeA);
-	    		  return;
+	    		  return node;
 	    	}
     	}
+    	nodes.add(nodeA);
+    	return nodeA;
     	/*
     	for(Node node : nodes) {
     	   
@@ -34,7 +35,7 @@ public class Graph {
     	   }
        }
     	*/
-       nodes.add(nodeA);	
+      //nodes.add(nodeA);	
         
     	
     }
@@ -126,7 +127,7 @@ public class Graph {
     		graphToString += currNode.getName() + ": " + currNode.getDistance() + ", path = { ";
     		
     		List<Node> reversedPathList = currNode.getShortestPath();
-    		Collections.reverse(reversedPathList);
+    		//Collections.reverse(reversedPathList);
     		
     		for(Node currPathNode : reversedPathList) {
     			graphToString += currPathNode.getName() + " ";
@@ -136,9 +137,25 @@ public class Graph {
     	}
     	return graphToString;
     }
-    //public Node getNodeDest(String from, String to) {
-    	//if(nodes)
-   // }
+    
+    //Once calculated, ask for the quickest way to get to a destination
+    public int getCalculatedDestination(int destination) {
+    	for(Node currNode : nodes) {
+    		if(currNode.getName().equals(String.valueOf(destination))) {
+    			List<Node> destinationNodeList = currNode.getShortestPath();
+    			//return the top
+    			if(!destinationNodeList.isEmpty()) {
+    				return Integer.parseInt(destinationNodeList.get(0).getName());
+    			}else {
+    				return -1;
+    			}
+    			
+    			
+    		}
+    	}
+    	//No destination
+    	return -1;
+    }
     
     public Node getSourceNode() {
     	return source;

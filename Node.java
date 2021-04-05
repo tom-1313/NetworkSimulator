@@ -25,7 +25,12 @@ public class Node {
 	        this.name = name;
 	    }
 	    
-	    public void setDistance(double newDistance) {
+	    public Node(int nsap) {
+			this.name = String.valueOf(nsap);
+	    	// TODO Auto-generated constructor stub
+		}
+
+		public void setDistance(double newDistance) {
 	    	distance = newDistance;
 	    }
 	    
