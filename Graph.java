@@ -66,36 +66,7 @@ public class Graph {
         return graph;
     }
     
-    //We are guarenteed that the source of graph1 is going to be connected to the source of graph2 with a certified distance
-    //We must return a combination of these two graphs put together, with the correct distances for each.
-    public Graph combineGraphs(Graph graph1, Graph graph2, double distance) {
-    	Node source1 = graph1.getSourceNode();
-    	Node source2 = graph2.getSourceNode();
-    	
-    	source1.addDestination(source2, distance);
-    	Graph combinationalGraph = new Graph();
-    	
-    	
-    	Iterator it = graph1.getPathList().iterator();
-    	while (it.hasNext()) {	        
-			Node node = (Node)it.next();
-			combinationalGraph.addNode(node);
-    	}
-    	
-    	Iterator it2 = graph2.getPathList().iterator();
-    	while (it.hasNext()) {	        
-			Node node = (Node)it.next();
-			combinationalGraph.addNode(node);
-    	}
-    	
-    	
-    	combinationalGraph.addNode(source1);
-    	combinationalGraph.addNode(source2);
-    	
-    	return combinationalGraph;
-    	
-    	
-    }
+    
     
     private static Node getLowestDistanceNode(Set < Node > unsettledNodes) {
         Node lowestDistanceNode = null;
@@ -123,17 +94,25 @@ public class Graph {
     
     @Override
     public String toString() {
-    	String graphToString = "Distance and path from " + source.getName() + ":\n";
+    	String graphToString = "Calculated routes from " + source.getName() + ":\n";
     	for(Node currNode : nodes) {
-    		graphToString += currNode.getName() + ": " + currNode.getDistance() + ", path = { ";
-    		
     		List<Node> reversedPathList = currNode.getShortestPath();
-    		//Collections.reverse(reversedPathList);
-    		
-    		for(Node currPathNode : reversedPathList) {
-    			graphToString += currPathNode.getName() + " ";
+    		if(!reversedPathList.isEmpty()) {
+    			reversedPathList.remove(0);
+    			graphToString += currNode.getName() + ": " + currNode.getDistance() + ", path = { ";
+        		reversedPathList.add(new Node(currNode.getName()));
+        		
+        		
+        		for(Node currPathNode : reversedPathList) {
+        			graphToString += currPathNode.getName() + " ";
+        		}
+        		graphToString += "} \n";
     		}
-    		graphToString += "} \n";
+    		else {
+    			
+    		}
+    		
+    		
     		//break;
     	}
     	return graphToString;
@@ -144,17 +123,28 @@ public class Graph {
     	for(Node currNode : nodes) {
     		if(currNode.getName().equals(String.valueOf(destination))) {
     			List<Node> destinationNodeList = currNode.getShortestPath();
-    			//return the top
+    			
     			if(!destinationNodeList.isEmpty()) {
-    				//return Integer.parseInt(destinationNodeList.get(0).getName());
-    				try {
-    					return Integer.parseInt(destinationNodeList.get(1).getName());
-    				}catch(Exception e){
-    					return -1;
-    				}
+    				destinationNodeList.add(new Node(destination));
+    				return Integer.parseInt(destinationNodeList.get(0).getName());
     			}else {
     				return -1;
     			}
+    			/*
+    			//return the top
+    			if(!destinationNodeList.isEmpty()) {
+    				destinationNodeList.remove(0);
+    			}else {
+    				return -1;
+    			}
+    			
+    			if(!destinationNodeList.isEmpty()) {
+    				return Integer.parseInt(destinationNodeList.get(0).getName());
+    			}else {
+    				return -1;
+    			}
+    			*/
+    			
     			
     			
     		}

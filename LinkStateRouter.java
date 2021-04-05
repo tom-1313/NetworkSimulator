@@ -57,7 +57,7 @@ public class LinkStateRouter extends Router {
 				process = true;
 				debug.println(3, "(LinkStateRouter.run): I am being asked to transmit: " + toSend.data
 						+ " to the destination: " + toSend.destination);
-				route(nsap, new Packet(nsap, toSend.destination, 5, toSend.data));
+				route(nsap, new Packet(nsap, toSend.destination, 99, toSend.data));
 			}
 			
 			// Send a ping every delay, and update our graph
@@ -197,7 +197,7 @@ public class LinkStateRouter extends Router {
 
 					if (p.isRecieved() && p.dest == nsap) {
 						
-						debug.println(1, nsap + " successfully sent and recieved a ping to " + p.source);
+						debug.println(4, nsap + " successfully sent and recieved a ping to " + p.source);
 
 						double timeTaken = (double) (System.currentTimeMillis() - p.getStartTime()); // Need to divide by two here
 
@@ -218,15 +218,15 @@ public class LinkStateRouter extends Router {
 					} else if (p.dest == nsap) {
 						p.recieved();
 						
-						debug.println(1, nsap + " has been pinged by " + p.source);
+						debug.println(4, nsap + " has been pinged by " + p.source);
 						// PingPacket returnPacket = new PingPacket(nsap, p.source, 20);
 						int temp = p.dest;
 						p.dest = p.source;
 						p.source = temp;
 						// Need to identify the link to send it back out on.
-						debug.println(1, nsap + " Returning a ping to sender: " + p.dest);
+						debug.println(4, nsap + " Returning a ping to sender: " + p.dest);
 
-						floodRoute(nsap, p);
+						route(nsap, p);
 
 						// Need to identify the link index and which of those links will have the ip
 						// address, in link 65
@@ -250,13 +250,8 @@ public class LinkStateRouter extends Router {
 								"(LinkStateRouter.run): Packet has arrived!  Reporting to the NIC - for accounting purposes!");
 						debug.println(6, "(LinkStateRouter.run): Payload: " + p.payload);
 						nic.trackArrivals(p.payload);
-					} else if (p.hopCount > 0) {
-						// Still more routing to do
-						//p.hopCount--;
-						route(toRoute.originator, p);
 					} else {
-						debug.println(5, "Packet has too many hops.  Dropping packet from " + p.source + " to " + p.dest
-								+ " by router " + nsap);
+						route(nsap, p);
 					}
 				}
 
@@ -277,7 +272,7 @@ public class LinkStateRouter extends Router {
 	private void floodPingPackets() {
 		for (int randNSAP : nic.getOutgoingLinks()) {
 			PingPacket p = new PingPacket(nsap, randNSAP, System.currentTimeMillis());
-			debug.println(1, nsap + " is sending a ping to " + randNSAP);
+			debug.println(4, nsap + " is sending a ping to " + randNSAP);
 			nic.sendOnLink(nic.getOutgoingLinks().indexOf(randNSAP), p);
 			//floodRoute(nsap, p);
 		}
@@ -304,21 +299,23 @@ public class LinkStateRouter extends Router {
 		//Send a packet to its destination as defined in the packet class
 		int destinationNSAP = graph.getCalculatedDestination(p.dest);
 		
-		if(p.dest != linkOriginator) {
+		boolean graphCalculatedCorrectly = (destinationNSAP != -1);
+		
+		boolean destIsNeighbor = nic.getOutgoingLinks().contains(destinationNSAP);
 			
 			// Route through the graph!
-			if (destinationNSAP != -1) {
-				nic.sendOnLink(destinationNSAP, p);
+			if (graphCalculatedCorrectly && destIsNeighbor) {
+				nic.sendOnLink(nic.getOutgoingLinks().indexOf(destinationNSAP), p);
+				//debug.println(1, "routed correctly!");
 			}
 			// If we can't route through the graph, we see if we can send to a neighbor!
-			else if (nic.getOutgoingLinks().contains(p.dest)) {
+			else if(nic.getOutgoingLinks().contains(p.dest)){
 				nic.sendOnLink(nic.getOutgoingLinks().indexOf(p.dest), p);
 				// Oh no! We can't send it anywhere and are forced to drop the packet!
-			} else {
-				debug.println(1, "not a neighbor and graph is uncalculated! Dropping the packet!");
+			}else {
+				//debug.println(1, "Error: Unable to route from " + nsap + " to " + p.dest + " " + destinationNSAP);
 			}
-		
-		}
+
 		
 	}
 	
