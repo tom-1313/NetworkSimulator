@@ -23,53 +23,129 @@ public class LinkStateRouter extends Router {
 	}
 
 	Debug debug;
-	public HashMap<Integer, Double> table;
+	public HashMap<Integer, Double> linkTable;
+	public Map<Integer, HashMap<Integer, Double>> networkTable;
 	public static final int delay = 1000;
 	public Graph graph;
 	public Node router;
+	public final int tableHopCount = 50;
+	int flip;
 
 	public LinkStateRouter(int nsap, NetworkInterface nic) {
 		super(nsap, nic);
-		debug = Debug.getInstance(); // For debugging!
-		table = new HashMap<Integer, Double>();
+		linkTable = new HashMap<Integer, Double>();
+		networkTable = new HashMap<Integer, HashMap<Integer, Double>>();
 		graph = new Graph();
 		router = new Node(String.valueOf(nsap));
+		debug = Debug.getInstance(); // For debugging!
+		flip = 0;
 	}
 
 	public void run() {
 
-		long nextPingTime = System.currentTimeMillis() + delay;
+		long nextPingTime = System.currentTimeMillis();
 		while (true) {
-
-			// Send a ping every delay, and update our graph
-			if (nextPingTime <= System.currentTimeMillis()) {
-				for (int randNSAP : nic.getOutgoingLinks()) {
-					floodPingPackets(new PingPacket(nsap, randNSAP, System.currentTimeMillis()));
-
-					// create our initial graphs, then flood graph packets of the nodes that contain
-					// our graphs
-					//graph.calculateShortestPathFromSource(graph, router);
-					floodGraphPackets(new GraphPacket(nsap, randNSAP, System.currentTimeMillis(), graph));
-				}
-				nextPingTime = System.currentTimeMillis() + delay;
-
-				
-			}
-
+			
 			boolean process = false;
 
 			// See if there is anything to process
 			NetworkInterface.TransmitPair toSend = nic.getTransmit();
 
 			// NetworkInterface.TransmitPair toSend = null;
-
 			if (toSend != null) {
 				// There is something to send out
 				process = true;
 				debug.println(3, "(LinkStateRouter.run): I am being asked to transmit: " + toSend.data
 						+ " to the destination: " + toSend.destination);
-				route(-1, new Packet(nsap, toSend.destination, 5, toSend.data));
+				route(nsap, new Packet(nsap, toSend.destination, 5, toSend.data));
 			}
+			
+			// Send a ping every delay, and update our graph
+			if (nextPingTime <= System.currentTimeMillis() && flip == 0) {
+				
+				//Send pings to all of our neighbors
+				floodPingPackets();
+				
+				nextPingTime = System.currentTimeMillis() + delay;
+				flip++;
+			}else if(nextPingTime <= System.currentTimeMillis() && flip == 1) {
+				
+				//Send graph packets to everyone 
+				floodGraphPackets();
+				
+				nextPingTime = System.currentTimeMillis() + delay;
+				flip++;
+			}else if(nextPingTime <= System.currentTimeMillis() && flip == 2) {
+				
+				//Create a new graph
+				graph = new Graph();
+				
+				//Our current router
+				
+				
+				
+				//All of our direct destinations
+				linkTable.forEach((routerInt, distance) -> {
+					Node tableNode = new Node(routerInt);
+					router.addDestination(tableNode, distance);
+					//tableNode.addDestination(router, distance);
+					
+					//System.out.println(distance);
+					graph.addNode(tableNode);
+				});
+				
+				
+				networkTable.forEach((router,map) -> {
+					//check and see if we already have a node with this name, if we do, then just use the one we already have instead of creating a new one
+					Node headerNode = graph.addNode(new Node(router));
+					
+					//add each of the connections from this node to 
+					map.forEach((routerInt, distance) -> {
+						Node tableNode = graph.addNode(new Node(routerInt));
+						debug.println(1, "" + routerInt);
+						headerNode.addDestination(tableNode, distance);
+						//tableNode.addDestination(headerNode, distance);
+						
+						//graph.addNode(tableNode);
+					});
+					//graph.addNode(headerNode);
+				});
+				
+				graph.addNode(router);
+				//Actually calculate our graph
+				graph.calculateShortestPathFromSource(graph, router);
+				debug.println(1, graph.toString());
+				debug.println(2, router.output());
+				nextPingTime = System.currentTimeMillis() + delay;
+				flip = 0;
+			}
+				
+				
+				/*
+				
+				
+				//Calculate the graph
+				graph.calculateShortestPathFromSource(graph, router);
+				
+				for (int randNSAP : nic.getOutgoingLinks()) {
+					
+					floodGraphPackets(new GraphPacket(nsap, randNSAP, System.currentTimeMillis(), graph));
+					// create our initial graphs, then flood graph packets of the nodes that contain
+					// our graphs
+					
+				}
+				
+				
+				nextPingTime = System.currentTimeMillis() + delay;
+				
+				//Calculate the graph again but with more paths
+				graph.calculateShortestPathFromSource(graph, router);
+				debug.println(1, graph.toString());
+				
+				
+			}
+*/
+			
 
 			NetworkInterface.ReceivePair toRoute = nic.getReceived();
 
@@ -80,17 +156,22 @@ public class LinkStateRouter extends Router {
 				if (toRoute.data instanceof GraphPacket) {
 					// debug.println(1, "Graph packet!!!!!!!!");
 					GraphPacket p = (GraphPacket) toRoute.data;
-					double timeTakenToTraverse = System.currentTimeMillis() - p.getStartTime();
-					router.addDestination(p.graph.getSourceNode(), timeTakenToTraverse);
-					concatonateGraphNodes(p);
+					//double timeTakenToTraverse = System.currentTimeMillis() - p.getStartTime();
+					
+					if(p.hopCount > 0) {
+						p.hopCount--;
+						floodRoute(nsap, p);
+					}
+					
+					networkTable.put(p.source, p.linkTable);
+					//router.addDestination(p.graph.getSourceNode(), timeTakenToTraverse);
+					//concatonateGraphNodes(p);
 					
 
 				}else if (toRoute.data instanceof PingPacket) {
 					// We process our ping data
 					PingPacket p = (PingPacket) toRoute.data;
-					// debug.println(1, "WE received A PING PACKET YAAAAAY");
-					// If our packet has been recieved, and the destination is the original sender
-					// debug.println(1, p.dest + " " + nsap);
+
 					if (p.isRecieved() && p.dest == nsap) {
 
 						double timeTaken = (double) (System.currentTimeMillis() - p.getStartTime()); // Need to divide by two here
@@ -101,11 +182,11 @@ public class LinkStateRouter extends Router {
 
 						// nic.sendOnLink(nic.getOutgoingLinks().indexOf(toRoute.originator), p);//This
 						// finds the link that
-						table.put(toRoute.originator, timeTaken);
+						linkTable.put(toRoute.originator, timeTaken);
 
-						Node newNode = new Node(String.valueOf(p.source));
-						router.addDestination(newNode, timeTaken);
-						graph.addNode(newNode);
+						//Node newNode = new Node(String.valueOf(p.source));
+						//router.addDestination(newNode, timeTaken);
+						//graph.addNode(newNode);
 
 						// If the packet reaches its destination, but we
 					} else if (p.dest == nsap) {
@@ -115,9 +196,9 @@ public class LinkStateRouter extends Router {
 						p.dest = p.source;
 						p.source = temp;
 						// Need to identify the link to send it back out on.
-						debug.println(4, "Returning to sender:" + nic.getOutgoingLinks().indexOf(toRoute.originator));
+						debug.println(4, "Returning to sender: " + nic.getOutgoingLinks().indexOf(toRoute.originator));
 
-						nic.sendOnLink(nic.getOutgoingLinks().indexOf(toRoute.originator), p);
+						route(toRoute.originator, p);
 
 						// Need to identify the link index and which of those links will have the ip
 						// address, in link 65
@@ -143,7 +224,7 @@ public class LinkStateRouter extends Router {
 						nic.trackArrivals(p.payload);
 					} else if (p.hopCount > 0) {
 						// Still more routing to do
-						p.hopCount--;
+						//p.hopCount--;
 						route(toRoute.originator, p);
 					} else {
 						debug.println(5, "Packet has too many hops.  Dropping packet from " + p.source + " to " + p.dest
@@ -161,11 +242,12 @@ public class LinkStateRouter extends Router {
 			}
 		}
 	}
+	/*
 	private synchronized void concatonateGraphNodes(GraphPacket p) {
 		
-		graph.getSourceNode().addDestination(p.graph.getSourceNode(), System.currentTimeMillis() - p.getStartTime());
-		graph.addNode(p.graph.getSourceNode());
-		/*
+		//router.addDestination(p.graph.getSourceNode(), System.currentTimeMillis() - p.getStartTime());
+		//graph.addNode(p.graph.getSourceNode());
+		
 		for (Node newNode : p.graph.getPathList()) {
 			
 			if(!newNode.getName().equals(String.valueOf(nsap)));{
@@ -176,26 +258,16 @@ public class LinkStateRouter extends Router {
 			
 		
 		}
-		*/
+		
 	
 		Iterator it = p.graph.getPathList().iterator();
-		while (it.hasNext()) {
-	        
-	        //System.out.println(pair.getKey() + " = " + pair.getValue());
-			try {
+		while (it.hasNext()) {	        
 				Node newNode = (Node)it.next();
 				graph.addNode(newNode);
-			}catch(Exception e) {
-				
-				graph.addNode(newNode);
-			}
-			
-	        
-	        
 	    }
 		
-		graph.calculateShortestPathFromSource(graph, router);
-		debug.println(1, graph.toString());
+		//graph.calculateShortestPathFromSource(graph, router);
+		//debug.println(1, graph.toString());
 	    
 		
 
@@ -203,32 +275,59 @@ public class LinkStateRouter extends Router {
 	
 	// For some small amount of time, wait and then send a pingpacket to all
 	// neighbors
+*/
+	private void floodPingPackets() {
+		for (int randNSAP : nic.getOutgoingLinks()) {
+			PingPacket p = new PingPacket(nsap, randNSAP, System.currentTimeMillis());
+			nic.sendOnLink(nic.getOutgoingLinks().indexOf(p.dest), p);
+		}
+		
+	}
 
-	private void floodPingPackets(PingPacket p) {
+	private void floodGraphPackets() {
+		/*
 		ArrayList<Integer> outLinks = nic.getOutgoingLinks();
 		int size = outLinks.size();
 		for (int i = 0; i < size; i++) {
 			nic.sendOnLink(i, p);
 		}
-	}
-
-	private void floodGraphPackets(GraphPacket p) {
-		ArrayList<Integer> outLinks = nic.getOutgoingLinks();
-		int size = outLinks.size();
-		for (int i = 0; i < size; i++) {
-			nic.sendOnLink(i, p);
+		*/
+		for (int randNSAP : nic.getOutgoingLinks()) {
+			GraphPacket p = new GraphPacket(nsap, randNSAP, tableHopCount, linkTable);
+			nic.sendOnLink(nic.getOutgoingLinks().indexOf(p.dest), p);
 		}
 	}
 
 	private void route(int linkOriginator, Packet p) {
-		ArrayList<Integer> outLinks = nic.getOutgoingLinks();
-		int size = outLinks.size();
-		for (int i = 0; i < size; i++) {
-			if (outLinks.get(i) != linkOriginator) {
-				// Not the originator of this packet - so send it along!
-				nic.sendOnLink(i, p);
-			}
+		//Send a packet to its destination as defined in the packet class
+		int destinationNSAP = graph.getCalculatedDestination(p.dest);
+		
+		//Route through the graph!
+		if(destinationNSAP != -1) {
+			nic.sendOnLink(destinationNSAP, p);
 		}
+		//If we can't route through the graph, we see if we can send to a neighbor!
+		else if(nic.getOutgoingLinks().indexOf(p.dest) != linkOriginator) {
+			nic.sendOnLink(nic.getOutgoingLinks().indexOf(p.dest), p);
+		
+		//Oh no! We can't send it anywhere and are forced to drop the packet!
+		}else {
+			debug.println(3, "not a neighbor and graph is uncalculated! Dropping the packet!");
+		}
+		
 	}
+	
+	
+	private void floodRoute(int linkOriginator, Packet p) {
+        ArrayList<Integer> outLinks = nic.getOutgoingLinks();
+        int size = outLinks.size();
+        for (int i = 0; i < size; i++) {
+            if (outLinks.get(i) != nsap && nic.getOutgoingLinks().indexOf(p.source) != linkOriginator) {
+                // Not the originator of this packet - so send it along!
+                nic.sendOnLink(i, p);
+            }
+        }
+    }
+    
 
 }

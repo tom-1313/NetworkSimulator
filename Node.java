@@ -5,19 +5,34 @@ import java.util.Map;
 
 public class Node {
 	    private String name;
-	    
+	    private String returnStr;
 	    private List<Node> shortestPath = new LinkedList<>();
 	    
 	    private double distance = Float.MAX_VALUE;
 	    
 	    Map<Node, Double> adjacentNodes = new HashMap<>();
 
-	    public void addDestination(Node destination, double distance) {
-	        if(!adjacentNodes.containsKey(destination)) {
+	    public void addDestination(Node newNode, double distance) {
+	    	if(!adjacentNodes.isEmpty()) {
+	    		for (Map.Entry<Node,Double> entry : adjacentNodes.entrySet()) {
+	    			if(newNode.getName().equals(entry.getKey().getName())) {
+	    				adjacentNodes.remove(entry.getKey());
+	    				break;
+	    				
+	    			}
+	    		}
+	    	}
+	    	adjacentNodes.put(newNode, distance);
+	    	
+	    	
+	    	/*
+	    	
+	    	if(!adjacentNodes.containsKey(destination)) {
 	        	adjacentNodes.put(destination, distance);
 	        }else {
 	        	adjacentNodes.replace(destination, distance);
 	        }
+	        */
 	    	
 	    }
 	 
@@ -25,7 +40,12 @@ public class Node {
 	        this.name = name;
 	    }
 	    
-	    public void setDistance(double newDistance) {
+	    public Node(int nsap) {
+			this.name = String.valueOf(nsap);
+	    	// TODO Auto-generated constructor stub
+		}
+
+		public void setDistance(double newDistance) {
 	    	distance = newDistance;
 	    }
 	    
@@ -43,6 +63,16 @@ public class Node {
 	    }
 	    public String getName() {
 	    	return name;
+	    }
+
+	    public String output() {
+	    	returnStr = " ";
+	    	adjacentNodes.forEach((node, distance) ->{
+	    		
+	    		returnStr += "Nodes: " + node.getName() + " ";
+	    	});
+	    	
+	    	return returnStr;
 	    }
 	    
 }
