@@ -28,7 +28,7 @@ public class LinkStateRouter extends Router {
 	public static final int delay = 1000;
 	public Graph graph;
 	public Node router;
-	public final int tableHopCount = 50;
+	public final int tableHopCount = 15;
 	int flip;
 
 	public LinkStateRouter(int nsap, NetworkInterface nic) {
@@ -199,7 +199,7 @@ public class LinkStateRouter extends Router {
 						
 						debug.println(4, nsap + " successfully sent and recieved a ping to " + p.source);
 
-						double timeTaken = (double) (System.currentTimeMillis() - p.getStartTime()); // Need to divide by two here
+						double timeTaken = (double) ((System.currentTimeMillis() - p.getStartTime()) / 2);
 
 						debug.println(4,
 								"(LinkStateRouter.run): PingPacket has arrived!  Reporting to the NIC - for accounting purposes!"
@@ -218,28 +218,20 @@ public class LinkStateRouter extends Router {
 					} else if (p.dest == nsap) {
 						p.recieved();
 						
-						debug.println(4, nsap + " has been pinged by " + p.source);
+						//debug.println(4, nsap + " has been pinged by " + p.source);
 						// PingPacket returnPacket = new PingPacket(nsap, p.source, 20);
 						int temp = p.dest;
 						p.dest = p.source;
 						p.source = temp;
+						p.hopCount = tableHopCount;
 						// Need to identify the link to send it back out on.
 						debug.println(4, nsap + " Returning a ping to sender: " + p.dest);
-
+						//floodRoute(nsap, p);
 						route(nsap, p);
 
-						// Need to identify the link index and which of those links will have the ip
-						// address, in link 65
-
-						// nic.sendOnLink(nic.getOutgoingLinks().indexOf(toRoute.originator), p);
-
-						// route()
-
-						// Each ping packet when sent will store the current time
-						// If we sent it
-						// Then we check the time and store the value in a hashmap
-						// If we didn't send it, then we
-
+					}else {
+						p.hopCount--;
+						route(nsap, p);
 					}
 
 				} else if (toRoute.data instanceof Packet) {
@@ -274,11 +266,15 @@ public class LinkStateRouter extends Router {
 			PingPacket p = new PingPacket(nsap, randNSAP, System.currentTimeMillis());
 			debug.println(4, nsap + " is sending a ping to " + randNSAP);
 			nic.sendOnLink(nic.getOutgoingLinks().indexOf(randNSAP), p);
-			//floodRoute(nsap, p);
 		}
 		
-		
-		
+	}
+	
+	private void floodPingPackets(PingPacket p) {
+		for (int randNSAP : nic.getOutgoingLinks()) {
+			//debug.println(4, nsap + " is returning a ping to " + randNSAP);
+			nic.sendOnLink(nic.getOutgoingLinks().indexOf(randNSAP), p);
+		}
 	}
 
 	private void floodGraphPackets() {
@@ -313,6 +309,11 @@ public class LinkStateRouter extends Router {
 				nic.sendOnLink(nic.getOutgoingLinks().indexOf(p.dest), p);
 				// Oh no! We can't send it anywhere and are forced to drop the packet!
 			}else {
+				
+				if(p instanceof PingPacket) {
+					debug.println(1, nsap + " Sent a return ping via flooding to " + p.dest);
+					floodPingPackets((PingPacket)p);
+				}
 				//debug.println(1, "Error: Unable to route from " + nsap + " to " + p.dest + " " + destinationNSAP);
 			}
 
