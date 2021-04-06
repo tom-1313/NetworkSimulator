@@ -1,5 +1,5 @@
 
-public class PingPacket {
+public class PingPacket extends Packet{
 	private boolean received;
 	private long timeInMillis;
 	

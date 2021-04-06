@@ -57,7 +57,7 @@ public class LinkStateRouter extends Router {
 				process = true;
 				debug.println(3, "(LinkStateRouter.run): I am being asked to transmit: " + toSend.data
 						+ " to the destination: " + toSend.destination);
-				route(nsap, new Packet(nsap, toSend.destination, 99, toSend.data));
+				route(nsap, new Packet(nsap, toSend.destination, tableHopCount, toSend.data));
 			}
 			
 			// Send a ping every delay, and update our graph
@@ -86,14 +86,14 @@ public class LinkStateRouter extends Router {
 				
 				
 				
-				debug.println(1, router.getName() + ": ");
+				debug.println(3, router.getName() + ": ");
 				
 				//All of our direct destinations
 				linkTable.forEach((routerInt, distance) -> {
 					Node tableNode = graph.addNode(new Node(routerInt));
 					router.addDestination(tableNode, distance);
 					//tableNode.addDestination(router, distance);
-					debug.println(1, "	" + routerInt + " - " + distance);
+					debug.println(3, "	" + routerInt + " - " + distance);
 					//System.out.println(distance);
 					
 				});
@@ -110,26 +110,10 @@ public class LinkStateRouter extends Router {
 						Node tableNode = graph.addNode(new Node(routerInt));
 						headerNode.addDestination(tableNode, distance);
 						//tableNode.addDestination(headerNode, distance);
-						debug.println(1, "			" + routerInt + " - " + distance);
+						debug.println(3, "			" + routerInt + " - " + distance);
 						
 					}
-					
-					/*
-					//add each of the connections from this node to 
-					map.forEach((routerInt, distance) -> {
-						Node tableNode = new Node(routerInt);
-						tableNode = graph.addNode(new Node(routerInt));
-						//debug.println(1, "" + routerInt);
-						
-						debug.println(1, router.getName() + ": " + routerHeadInt + ": " + routerInt + " " + distance);
-						headerNode.addDestination(tableNode, distance);
-						tableNode.addDestination(headerNode, distance);
-						
-						//graph.addNode(tableNode);
-					});
-					//graph.addNode(headerNode);
-					 * 
-					 */
+
 				});
 				
 				debug.println(1, "");
@@ -142,33 +126,7 @@ public class LinkStateRouter extends Router {
 				nextPingTime = System.currentTimeMillis() + delay;
 				flip = 0;
 			}
-				
-				
-				/*
-				
-				
-				//Calculate the graph
-				graph.calculateShortestPathFromSource(graph, router);
-				
-				for (int randNSAP : nic.getOutgoingLinks()) {
-					
-					floodGraphPackets(new GraphPacket(nsap, randNSAP, System.currentTimeMillis(), graph));
-					// create our initial graphs, then flood graph packets of the nodes that contain
-					// our graphs
-					
-				}
-				
-				
-				nextPingTime = System.currentTimeMillis() + delay;
-				
-				//Calculate the graph again but with more paths
-				graph.calculateShortestPathFromSource(graph, router);
-				debug.println(1, graph.toString());
-				
-				
-			}
-*/
-			
+
 
 			NetworkInterface.ReceivePair toRoute = nic.getReceived();
 
@@ -206,13 +164,7 @@ public class LinkStateRouter extends Router {
 										+ " IP Address: " + nic.getNSAP() + "link from which it was sent is: "
 										+ toRoute.originator + " time taken: " + timeTaken);
 
-						// nic.sendOnLink(nic.getOutgoingLinks().indexOf(toRoute.originator), p);//This
-						// finds the link that
 						linkTable.put(p.source, timeTaken);
-
-						//Node newNode = new Node(String.valueOf(p.source));
-						//router.addDestination(newNode, timeTaken);
-						//graph.addNode(newNode);
 
 						// If the packet reaches its destination, but we
 					} else if (p.dest == nsap) {
