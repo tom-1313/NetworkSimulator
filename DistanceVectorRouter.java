@@ -88,16 +88,13 @@ public class DistanceVectorRouter extends Router {
             if (toSend != null) {
                 // There is something to send out
                 process = true;
-//                debug.println(0, "(DistanceVectorRouter.run): I am being asked to transmit: " + toSend.data + " to the destination: " + toSend.destination);
                 route(toSend.destination, new Packet(nsap, toSend.destination, 5, toSend.data));
-
             }
 
             NetworkInterface.ReceivePair toRoute = nic.getReceived();
             if (toRoute != null) {
                 // There is something to route through - or it might have arrived at destination
                 process = true;
-                //debug.println(3, "(DistanceVectorRouter.run): I am being asked to transmit: " + toRoute.data + " to the destination: " + toRoute.destination);
                 processPacket(toRoute.originator, toRoute.data);
             }
 
@@ -178,6 +175,7 @@ public class DistanceVectorRouter extends Router {
         routeTable = tempTable; //makes it the new map (might need to be synchronized)
     }
 
+    //Pings all the neighboring routers
     private void pingNeigbhors() {
         ArrayList<Integer> outLinks = nic.getOutgoingLinks();
         int size = outLinks.size();
@@ -186,10 +184,8 @@ public class DistanceVectorRouter extends Router {
         }
     }
 
-    /**
-     * Route the given packet out.
-     * Sends the given packet out based on the table if the destination is not on the table it routes it to the first router
-     **/
+    //Sends the given packet out based on the table
+    //If the destination is not on the table it routes it to the first router
     private void route(int link, Packet p) {
         if (routeTable.get(link) != null) {
             nic.sendOnLink(routeTable.get(link).link, p);
