@@ -21,6 +21,7 @@ public class NetworkInterface {
     private ArrayList<Integer> outgoingLinks;   // A list of outgoing links
     private ArrayList<Integer> incomingLinks;   // A list of incoming links
     
+
     private int capacity;                       // The limit to number of packets that can be waiting for processing on Queue
     private Queue<TransmitPair> transmissionQueue;    // A list of data that needs to be transmitted starting from this NIC
     private Queue<ReceivePair> receivedQueue;        // A list of data that has been received on this NIC and needs to be processed (received or routed)
@@ -96,7 +97,7 @@ public class NetworkInterface {
             Debug.getInstance().println(0, "Received message with no data.  Must include at least ONE byte of information.  Sent to Node " + nsap);
             return;
         }
-        
+
     	if (receivedQueue.size() < capacity) {
             // There is room to add it
             receivedQueue.add(new ReceivePair(originator, payload));
