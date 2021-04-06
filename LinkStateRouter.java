@@ -86,14 +86,14 @@ public class LinkStateRouter extends Router {
 				
 				
 				
-				debug.println(3, router.getName() + ": ");
+				debug.println(2, router.getName() + ": ");
 				
 				//All of our direct destinations
 				linkTable.forEach((routerInt, distance) -> {
 					Node tableNode = graph.addNode(new Node(routerInt));
 					router.addDestination(tableNode, distance);
 					//tableNode.addDestination(router, distance);
-					debug.println(3, "	" + routerInt + " - " + distance);
+					debug.println(2, "	" + routerInt + " - " + distance);
 					//System.out.println(distance);
 					
 				});
@@ -102,7 +102,7 @@ public class LinkStateRouter extends Router {
 				networkTable.forEach((routerHeadInt, map) -> {
 					//check and see if we already have a node with this name, if we do, then just use the one we already have instead of creating a new one
 					Node headerNode = graph.addNode(new Node(routerHeadInt));
-					debug.println(1, "		" + routerHeadInt + ": ");
+					debug.println(2, "		" + routerHeadInt + ": ");
 					for (Map.Entry<Integer,Double> entry : map.entrySet()) {
 						int routerInt = entry.getKey();
 						double distance = entry.getValue();
@@ -110,15 +110,15 @@ public class LinkStateRouter extends Router {
 						Node tableNode = graph.addNode(new Node(routerInt));
 						headerNode.addDestination(tableNode, distance);
 						//tableNode.addDestination(headerNode, distance);
-						debug.println(3, "			" + routerInt + " - " + distance);
+						debug.println(2, "			" + routerInt + " - " + distance);
 						
 					}
 
 				});
 				
-				debug.println(1, "");
-				debug.println(1, "");
-				debug.println(1, "");
+				debug.println(2, "");
+				debug.println(2, "");
+				debug.println(2, "");
 				//Actually calculate our graph
 				graph.calculateShortestPathFromSource(graph, router);
 				debug.println(1, graph.toString());
