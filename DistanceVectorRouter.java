@@ -136,7 +136,7 @@ public class DistanceVectorRouter extends Router {
             if (packet.dest == nsap) {
                 nic.trackArrivals(packet.payload);
             } else if (packet.hopCount > 0) {
-//                packet.hopCount--;
+
                 route(packet.dest, packet);
             } else {
                 debug.println(0, "Packet has too many hops.  Dropping packet from " + packet.source + " to " + packet.dest + " by router " + nsap);
