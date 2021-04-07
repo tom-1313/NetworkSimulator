@@ -20,21 +20,24 @@ Thomas Gadacy
   - Worked on DistanceVectorRouter
   - Created the Ping class and pingNeighors method
   - Contributed to the processPacket and route methods and the constructor of DistanceVectorRouter
+  - Debugging
 
 Andrew DePass
-- worked on LinkStateRouter class
-- worked on the Ping Packet class
-- worked on README
-- worked on Commenting through code
+- Worked on LinkStateRouter class
+- Worked on the Ping Packet class
+- Worked on README
+- Worked on Commenting through code
 
 Adam Curley
 - Worked on the DistanceVectorRouter
 - Recalculation Method
-- 
+- Process Packet
+- Debugging
 
 Matthew Hendrickson
-- worked on the LinkStateRouter
-- worked on the GraphPacket
-- worked on the PingPacket
+- Worked on the LinkStateRouter
+- Worked on the GraphPacket
+- Worked on the PingPacket
 - Sourced the Dijkstra, Node, and Graph Classes 
+- Debugging
 
