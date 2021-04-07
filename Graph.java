@@ -11,36 +11,28 @@ import java.util.Set;
 public class Graph {
 	
 	
-	private HashSet<Node> nodes = new HashSet<>();
-	private Node source;
+	private HashSet<Node> nodes = new HashSet<>(); //This stores the nodes for the network
+	private Node source;//This establishes nodes in the network
    
+	//This mehtod adds a node to the nodes hashset
 	public Node addNode(Node nodeA) {
        
     	Iterator it = nodes.iterator();
     	while (it.hasNext()) {	        
 			Node node = (Node)it.next();
 			if(node.getName().equals(nodeA.getName())){
-	    		//System.out.println("REturning!");  
+	    		 
 				return node;
 	    	}
     	}
     	nodes.add(nodeA);
-    	return nodeA;
-    	/*
-    	for(Node node : nodes) {
-    	   
-    	   if(node.getName().equals(nodeA.getName())){
-    		  nodes.remove(node);
-    		  nodes.add(nodeA);
-    		  return;
-    	   }
-       }
-    	*/
-      //nodes.add(nodeA);	
-        
+    	return nodeA;        
     	
     }
     
+
+	//This is the dijkstra's shortest path calculation that occurs within the graph amongst all of the nodes
+	//It returns a graph with the paths
     public Graph calculateShortestPathFromSource(Graph graph, Node source) {
         this.source = source;
     	source.setDistance(0);
@@ -67,7 +59,7 @@ public class Graph {
     }
     
     
-    
+    //This is a getter method to find to closest node to a given source as indicated by the hashset of nodes
     private static Node getLowestDistanceNode(Set < Node > unsettledNodes) {
         Node lowestDistanceNode = null;
         double lowestDistance = Double.MAX_VALUE;
@@ -81,6 +73,7 @@ public class Graph {
         return lowestDistanceNode;
     }
     
+	//This caculates the minimum to get to the evaluation node from the source node
     private static void CalculateMinimumDistance(Node evaluationNode,
     		  Double edgeWeigh, Node sourceNode) {
     		    Double sourceDistance = sourceNode.getDistance();
@@ -92,6 +85,8 @@ public class Graph {
     		    }
     		}
     
+
+	//This outputs the graph as a string
     @Override
     public String toString() {
     	String graphToString = "Calculated routes from " + source.getName() + ":\n";
@@ -111,9 +106,7 @@ public class Graph {
     		else {
     			
     		}
-    		
-    		
-    		//break;
+   
     	}
     	return graphToString;
     }
@@ -130,21 +123,7 @@ public class Graph {
     			}else {
     				return -1;
     			}
-    			/*
-    			//return the top
-    			if(!destinationNodeList.isEmpty()) {
-    				destinationNodeList.remove(0);
-    			}else {
-    				return -1;
-    			}
-    			
-    			if(!destinationNodeList.isEmpty()) {
-    				return Integer.parseInt(destinationNodeList.get(0).getName());
-    			}else {
-    				return -1;
-    			}
-    			*/
-    			
+    			    			
     			
     			
     		}
@@ -153,10 +132,12 @@ public class Graph {
     	return -1;
     }
     
+	//This retrieves the source node for a particular path
     public Node getSourceNode() {
     	return source;
     }
     
+	//This outputs the hashset of nodes
     public Set<Node> getPathList(){
     	return nodes;
     }
